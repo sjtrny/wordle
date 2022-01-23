@@ -1,12 +1,10 @@
 # wordle
 
-A Python toolkit for solving wordle. The toolkit provides:
-- an interactive solver
-- game and agent classes to simulate playing a game
+A very fast solver for wordle written in Python using numba.
 
-# Examples
+# Interactive Solver
 
-Interactive solver. Run `demo_solver.py`
+Run `demo_solver.py`
 
     Optimal starting guess: soare
     -----------------
@@ -19,7 +17,9 @@ Interactive solver. Run `demo_solver.py`
     Enter guess,code: prink,12200
     Answer is crimp
 
-Simulate a game
+# Simulate a game
+
+Run `demo_game.py`
 
     g = Game(word="crimp", verbose=True)
     agent = Agent(answers, guesses)
