@@ -45,5 +45,5 @@ When guessing there are 243 possible outcomes (5 letters with 3 states i.e. 3^5)
 where P(o_i) is the probability of outcome i. The value of P(o_i) is just the proportion
 of answers that fall in outcome i when playing the guess word.
 
-The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins and thus the fewest options once played.
+The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins. Once the outcome is observed we are left to choose amongst the relatively few remaining answers associated with the bin.
 
