@@ -2,9 +2,9 @@ from wordle import get_numeric_representations, get_bin_counts, entropy
 import numpy as np
 import time
 
-with open("words_answers.txt", "r") as answers_file:
+with open("../words_answers.txt", "r") as answers_file:
     answers = answers_file.read().splitlines()
-with open("words_guesses.txt", "r") as guesses_file:
+with open("../words_guesses.txt", "r") as guesses_file:
     guesses = guesses_file.read().splitlines()
 
 start_time = time.time()

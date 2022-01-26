@@ -1,14 +1,11 @@
-from wordle import Game, Agent
+from wordle import Game, StandardAgent
 import numpy as np
 from multiprocessing import Pool, cpu_count
 
-def job(
-    answer,
-    answers,
-    guesses
-):
+
+def job(answer, answers, guesses):
     g = Game(word=answer, verbose=False)
-    agent = Agent(answers, guesses, first_guess='reast')
+    agent = StandardAgent(answers, guesses, first_guess="reast")
     (
         final_guess,
         n_guesses,
@@ -20,13 +17,13 @@ def job(
 
 
 if __name__ == "__main__":
-    with open("words_answers.txt", "r") as answers_file:
+    with open("../words_answers.txt", "r") as answers_file:
         answers = answers_file.read().splitlines()
-    with open("words_guesses.txt", "r") as guesses_file:
+    with open("../words_guesses.txt", "r") as guesses_file:
         guesses = guesses_file.read().splitlines()
 
     pool = Pool(cpu_count())
-    results = pool.starmap(job, ( (answer, answers, guesses) for answer in answers) )
+    results = pool.starmap(job, ((answer, answers, guesses) for answer in answers))
 
     n_plays = np.array([result[1] for result in results])
 

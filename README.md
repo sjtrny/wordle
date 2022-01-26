@@ -22,9 +22,16 @@ Run `demo_solver.py`
 Run `demo_game.py`
 
     g = Game(word="crimp", verbose=True)
-    agent = Agent(answers, guesses)
+    agent = StandardAgent(answers, guesses)
     final_guess, _ = agent.play(g)
     print(final_guess)
+
+# Game Modes
+
+Wordle can be played in standard or hard mode. In hard mode, any revealed hints must be used in subsequent guesses.
+
+This package supports both standard and hard mode. For simulations you can choose between StandardAgent or HardAgent, while
+for interactive solving you can choose between StandardSolver and HardSolver.
 
 # Optimal First Word
 
@@ -61,3 +68,9 @@ of answers that fall in outcome i when playing the guess word.
 
 The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins. Once the outcome is observed we are left to choose amongst the relatively few remaining answers associated with the bin.
 
+# Installing Numba on Apple M1
+
+1. Install llvm version 11
+    arch -arm64 brew install llvm@11
+2. Install llvmlite by pointing to old llvm version
+    LLVM_CONFIG="/opt/homebrew/Cellar/llvm@11/11.1.0_3/bin/llvm-config" arch -arm64 pip install llvmlite

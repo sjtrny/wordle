@@ -1,11 +1,11 @@
-from wordle import InteractiveSolver
+from wordle import StandardSolver
 
-with open("words_answers.txt", "r") as answers_file:
+with open("../words_answers.txt", "r") as answers_file:
     answers = answers_file.read().splitlines()
-with open("words_guesses.txt", "r") as guesses_file:
+with open("../words_guesses.txt", "r") as guesses_file:
     guesses = guesses_file.read().splitlines()
 
-solver = InteractiveSolver(answers, guesses)
+solver = StandardSolver(answers, guesses)
 
 print("-----------------")
 print("WORDLE SOLVER")

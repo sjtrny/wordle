@@ -4,12 +4,8 @@ import numpy as np
 from multiprocessing import Pool, cpu_count
 import time
 
-def job(
-        answer,
-        first_guess,
-        answers,
-        guesses
-):
+
+def job(answer, first_guess, answers, guesses):
     g = Game(word=answer, verbose=False)
     agent = Agent(answers, guesses, first_guess=first_guess)
     (
@@ -23,9 +19,9 @@ def job(
 
 
 if __name__ == "__main__":
-    with open("words_answers.txt", "r") as answers_file:
+    with open("../words_answers.txt", "r") as answers_file:
         answers = answers_file.read().splitlines()
-    with open("words_guesses.txt", "r") as guesses_file:
+    with open("../words_guesses.txt", "r") as guesses_file:
         guesses = guesses_file.read().splitlines()
 
     start_time = time.time()
@@ -53,7 +49,9 @@ if __name__ == "__main__":
 
     for i in range(n_guesses):
         print(f"{i+1}/{n_guesses}", guesses_sorted[i])
-        results = pool.starmap(job, ((answer, guesses_sorted[i], answers, guesses) for answer in answers))
+        results = pool.starmap(
+            job, ((answer, guesses_sorted[i], answers, guesses) for answer in answers)
+        )
 
         n_plays[:, i] = np.array([result[1] for result in results])
 
@@ -70,5 +68,7 @@ if __name__ == "__main__":
     f = open("first_guess_results_deep.csv", "w")
     f.write("guess,mean_plays\n")
     for i in range(n_guesses):
-        f.write(f"{guesses_sorted[mean_plays_sort_idx[i]]},{mean_plays[mean_plays_sort_idx[i]]}\n")
+        f.write(
+            f"{guesses_sorted[mean_plays_sort_idx[i]]},{mean_plays[mean_plays_sort_idx[i]]}\n"
+        )
     f.close()
