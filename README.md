@@ -47,9 +47,12 @@ Run `compute_stats.py` to replicate results.
 
 # Methodology
 
-The solver attempts to play a word that reduces the remaining possibilities as much as possible in each round. This is equivalent to playing the word that has the highest entropy for the outcome.
+The solver attempts to play words that maximise the amount of information about the solution that is received after playing.
+In statistical terms this means playing the word that has the highest entropy for the outcome.
 
-When guessing there are 243 possible outcomes (5 letters with 3 states i.e. 3^5). The entropy for a guess is thus 
+A guess results in 243 possible outcomes (5 letters with 3 states i.e. 3^5). For example all 5 grey letters is one outcome, a green followed by four grey letters is another.
+
+The entropy for a guess is given by 
 
 ![equation](http://www.sciweavers.org/tex2img.php?eq=-%20%5Csum_%7Bi%3D1%7D%5E%7B243%7D%20P%28o_i%29%20%5Clog%7BP%28o_i%29%7D&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0)
 
