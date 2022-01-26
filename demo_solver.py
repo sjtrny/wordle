@@ -18,7 +18,7 @@ print(
 )
 print("-----------------")
 
-print(f"Optimal starting guess: soare")
+print(f"Optimal starting guess: reast")
 
 while True:
     print("-----------------")

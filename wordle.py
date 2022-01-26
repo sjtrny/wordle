@@ -1,7 +1,6 @@
 import numpy as np
-import pandas as pd
 import string
-from numba import jit, prange
+from numba import jit
 
 import array
 
@@ -146,7 +145,7 @@ def get_numeric_representations(wordlist):
 
 
 class Agent:
-    def __init__(self, answers, guesses):
+    def __init__(self, answers, guesses, first_guess="soare"):
         self.answers = answers
         self.guesses = guesses
 
@@ -156,15 +155,15 @@ class Agent:
         self.answers_numba, self.answers_char_counts = get_numeric_representations(
             self.answers
         )
+        self.first_guess = first_guess
 
     def play(self, game):
 
         guess_history = []
         code_history = []
 
-        first_guess = "soare"
-        guess_history.append(first_guess)
-        state = game.play(first_guess)
+        guess_history.append(self.first_guess)
+        state = game.play(self.first_guess)
         code_history.append(state)
 
         guess_total_mask = np.ones(len(self.guesses)).astype(bool)

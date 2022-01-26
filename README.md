@@ -26,11 +26,20 @@ Run `demo_game.py`
     final_guess, _ = agent.play(g)
     print(final_guess)
 
+# Optimal First Word
+
+In terms of fewest average plays the optimal first word is `reast` when
+considering all possible outcomes.
+
+When considering only the first play the optimal first word is `soares`.
+
+Run either `compute_first_word_{deep,shallow}.py` to replicate results.
+
 # Performance
 
-The solver currently finishes in an average of 3.7099 plays.
+The solver currently finishes in an average of `3.6396` plays.
 
-The solver fails for the following 9 words: hatch, jaunt, store, watch, found, waste, jolly, dilly, gaunt.
+The solver fails for the following 9 words: `goner, hatch, jaunt, found, waste, taunt, catch, dilly, boxer`.
 
 Run `compute_stats.py` to replicate results.
 
