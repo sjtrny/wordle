@@ -6,15 +6,15 @@ A very fast solver for wordle written in Python using numba.
 
 Run `demo_solver.py`
 
-    Optimal starting guess: soare
+    Optimal starting guess: reast
     -----------------
-    Enter guess,code: soare,00010
-    Next guess: trild, 175 valid guess words remaining
+    Enter guess,code: reast,10000
+    Next guess: courd
     -----------------
-    Enter guess,code: trild,02200
-    Next guess: prink, 21 valid guess words remaining
+    Enter guess,code: courd,20010
+    Next guess: crick
     -----------------
-    Enter guess,code: prink,12200
+    Enter guess,code: crick,22200
     Answer is crimp
 
 # Simulate a game
@@ -40,6 +40,8 @@ Run either `compute_first_word_{deep,shallow}.py` to replicate results.
 The solver currently finishes in an average of `3.6396` plays.
 
 The solver fails for the following 9 words: `goner, hatch, jaunt, found, waste, taunt, catch, dilly, boxer`.
+
+Failed words are often due to "lookalikes". For example with the word `hatch` the solver will check `match`, `batch`, `patch` and `latch` first and ultimately fail.
 
 Run `compute_stats.py` to replicate results.
 

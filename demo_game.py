@@ -5,8 +5,8 @@ with open("words_answers.txt", "r") as answers_file:
 with open("words_guesses.txt", "r") as guesses_file:
     guesses = guesses_file.read().splitlines()
 
-g = Game(word="panic", verbose=True)
-agent = Agent(answers, guesses, first_guess="soare")
+g = Game(word="crimp", verbose=True)
+agent = Agent(answers, guesses, first_guess="reast")
 (
     final_guess,
     _,
