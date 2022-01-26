@@ -83,6 +83,7 @@ The word that most evenly divides the answer pool into the 243 bins (i.e. highes
 1. Install llvm version 11
 
 `arch -arm64 brew install llvm@11`
+
 2. Install llvmlite by pointing to old llvm version
 
 `LLVM_CONFIG="/opt/homebrew/Cellar/llvm@11/11.1.0_3/bin/llvm-config" arch -arm64 pip install llvmlite`
