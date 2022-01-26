@@ -1,6 +1,3 @@
-# https://jonathanolson.net/experiments/optimal-wordle-solutions
-# start word selection can be done better than below
-
 from wordle import get_numeric_representations, get_bin_counts, entropy
 import numpy as np
 import time
@@ -25,14 +22,16 @@ bin_counts = get_bin_counts(
 guesses_entropy = entropy(bin_counts)
 
 # Sort by entropy
-sort_idx = np.argsort(guesses_entropy)
-
-guesses_sorted = np.array(guesses)[sort_idx]
-
-best_start_word = guesses_sorted[-1]
+sort_idx = np.flip(np.argsort(guesses_entropy))
 
 stop_time = time.time()
 
 print(
-    f"Optimal start word: {best_start_word}, computed in {stop_time-start_time:.2f} seconds."
+    f"Optimal start word: {guesses[sort_idx[0]]}, computed in {stop_time-start_time:.2f} seconds."
 )
+
+f = open("first_guess_results_shallow.csv", "w")
+f.write("guess,entropy\n")
+for i in range(len(guesses)):
+    f.write(f"{guesses[sort_idx[i]]},{guesses_entropy[sort_idx[i]]}\n")
+f.close()

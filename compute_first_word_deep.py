@@ -2,7 +2,7 @@ from wordle import Game, Agent
 from wordle import get_numeric_representations, get_bin_counts, entropy
 import numpy as np
 from multiprocessing import Pool, cpu_count
-
+import time
 
 def job(
         answer,
@@ -28,6 +28,8 @@ if __name__ == "__main__":
     with open("words_guesses.txt", "r") as guesses_file:
         guesses = guesses_file.read().splitlines()
 
+    start_time = time.time()
+
     guesses_numba, _ = get_numeric_representations(guesses)
     answers_numba, answers_char_counts = get_numeric_representations(answers)
 
@@ -44,6 +46,7 @@ if __name__ == "__main__":
 
     pool = Pool(cpu_count())
 
+    # How many guesses to check
     n_guesses = 100
 
     n_plays = np.zeros((len(answers), n_guesses))
@@ -56,9 +59,16 @@ if __name__ == "__main__":
 
     mean_plays = np.nanmean(n_plays, axis=0)
 
+    stop_time = time.time()
+
     mean_plays_sort_idx = np.argsort(mean_plays)
 
-    f = open("first_guess_results.txt", "w")
+    print(
+        f"Optimal start word: {guesses_sorted[mean_plays_sort_idx[0]]}, computed in {stop_time - start_time:.2f} seconds."
+    )
+
+    f = open("first_guess_results_deep.csv", "w")
+    f.write("guess,mean_plays\n")
     for i in range(n_guesses):
         f.write(f"{guesses_sorted[mean_plays_sort_idx[i]]},{mean_plays[mean_plays_sort_idx[i]]}\n")
     f.close()
