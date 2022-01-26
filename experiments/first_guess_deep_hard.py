@@ -1,4 +1,4 @@
-from wordle import Game, Agent
+from wordle import Game, HardAgent
 from wordle import get_numeric_representations, get_bin_counts, entropy
 import numpy as np
 from multiprocessing import Pool, cpu_count
@@ -7,7 +7,7 @@ import time
 
 def job(answer, first_guess, answers, guesses):
     g = Game(word=answer, verbose=False)
-    agent = Agent(answers, guesses, first_guess=first_guess)
+    agent = HardAgent(answers, guesses, first_guess=first_guess)
     (
         final_guess,
         n_guesses,
@@ -65,7 +65,7 @@ if __name__ == "__main__":
         f"Optimal start word: {guesses_sorted[mean_plays_sort_idx[0]]}, computed in {stop_time - start_time:.2f} seconds."
     )
 
-    f = open("first_guess_results_deep.csv", "w")
+    f = open("first_guess_deep_hard.csv", "w")
     f.write("guess,mean_plays\n")
     for i in range(n_guesses):
         f.write(

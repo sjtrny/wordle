@@ -30,7 +30,7 @@ print(
     f"Optimal start word: {guesses[sort_idx[0]]}, computed in {stop_time-start_time:.2f} seconds."
 )
 
-f = open("first_guess_results_shallow.csv", "w")
+f = open("first_guess_shallow.csv", "w")
 f.write("guess,entropy\n")
 for i in range(len(guesses)):
     f.write(f"{guesses[sort_idx[i]]},{guesses_entropy[sort_idx[i]]}\n")

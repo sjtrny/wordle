@@ -1,10 +1,14 @@
 # wordle
 
-A very fast solver for wordle written in Python using numba.
+A fast solver for wordle written in Python using numba.
+
+On my MacBook Pro (13-inch, M1, 2020) it takes:
+- 3 seconds to compute the optimal word for the first play
+- 30 minutes to compute the optimal word considering all outcomes
 
 # Interactive Solver
 
-Run `demo_solver.py`
+Run `demos/demo_solver.py`
 
     Optimal starting guess: reast
     -----------------
@@ -19,7 +23,7 @@ Run `demo_solver.py`
 
 # Simulate a game
 
-Run `demo_game.py`
+Run `demos/demo_game.py`
 
     g = Game(word="crimp", verbose=True)
     agent = StandardAgent(answers, guesses)
@@ -40,17 +44,23 @@ considering all possible outcomes.
 
 When considering only the first play the optimal first word is `soares`.
 
-Run either `compute_first_word_{deep,shallow}.py` to replicate results.
+Run either `first_guess_{deep,shallow}_{standard,hard}.py` to replicate results.
 
 # Performance
 
-The solver currently finishes in an average of `3.6396` plays.
+### Standard Mode
 
-The solver fails for the following 9 words: `goner, hatch, jaunt, found, waste, taunt, catch, dilly, boxer`.
+- Average number of plays to solve: 3.6004
+- Failed words: None
+
+### Hard Mode
+
+- Average number of plays to solve: 3.6396
+- Failed words: 9 total - `goner, hatch, jaunt, found, waste, taunt, catch, dilly, boxer`
+
+### Notes
 
 Failed words are often due to "lookalikes". For example with the word `hatch` the solver will check `match`, `batch`, `patch` and `latch` first and ultimately fail.
-
-Run `compute_stats.py` to replicate results.
 
 # Methodology
 
@@ -71,6 +81,8 @@ The word that most evenly divides the answer pool into the 243 bins (i.e. highes
 # Installing Numba on Apple M1
 
 1. Install llvm version 11
-    arch -arm64 brew install llvm@11
+
+`arch -arm64 brew install llvm@11`
 2. Install llvmlite by pointing to old llvm version
-    LLVM_CONFIG="/opt/homebrew/Cellar/llvm@11/11.1.0_3/bin/llvm-config" arch -arm64 pip install llvmlite
+
+`LLVM_CONFIG="/opt/homebrew/Cellar/llvm@11/11.1.0_3/bin/llvm-config" arch -arm64 pip install llvmlite`

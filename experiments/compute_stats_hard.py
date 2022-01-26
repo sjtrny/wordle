@@ -1,11 +1,11 @@
-from wordle import Game, StandardAgent
+from wordle import Game, HardAgent
 import numpy as np
 from multiprocessing import Pool, cpu_count
 
 
 def job(answer, answers, guesses):
     g = Game(word=answer, verbose=False)
-    agent = StandardAgent(answers, guesses, first_guess="reast")
+    agent = HardAgent(answers, guesses, first_guess="reast")
     (
         final_guess,
         n_guesses,
