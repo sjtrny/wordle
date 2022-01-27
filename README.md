@@ -6,7 +6,7 @@ On my MacBook Pro (13-inch, M1, 2020) it takes:
 - 3 seconds to compute the optimal word for the first play
 - 30 minutes to compute the optimal word considering all outcomes
 
-# Interactive Solver
+## Interactive Solver
 
 Run `demos/demo_solver.py`
 
@@ -21,7 +21,7 @@ Run `demos/demo_solver.py`
     Enter guess,code: crick,22200
     Answer is crimp
 
-# Simulate a game
+## Simulate a game
 
 Run `demos/demo_game.py`
 
@@ -30,14 +30,14 @@ Run `demos/demo_game.py`
     final_guess, _ = agent.play(g)
     print(final_guess)
 
-# Game Modes
+## Game Modes
 
 Wordle can be played in standard or hard mode. In hard mode, any revealed hints must be used in subsequent guesses.
 
 This package supports both standard and hard mode. For simulations you can choose between StandardAgent or HardAgent, while
 for interactive solving you can choose between StandardSolver and HardSolver.
 
-# Optimal First Word
+## Optimal First Word
 
 In terms of fewest average plays the optimal first word is `reast` when
 considering all possible outcomes.
@@ -46,7 +46,7 @@ When considering only the first play the optimal first word is `soares`.
 
 Run either `first_guess_{deep,shallow}_{standard,hard}.py` to replicate results.
 
-# Performance
+## Performance
 
 ### Standard Mode
 
@@ -62,7 +62,7 @@ Run either `first_guess_{deep,shallow}_{standard,hard}.py` to replicate results.
 
 Failed words are often due to "lookalikes". For example with the word `hatch` the solver will check `match`, `batch`, `patch` and `latch` first and ultimately fail.
 
-# Methodology
+## Methodology
 
 The solver attempts to play words that maximise the amount of information about the solution that is received after playing.
 In statistical terms this means playing the word that has the highest entropy for the outcome.
@@ -78,7 +78,7 @@ of answers that fall in outcome i when playing the guess word.
 
 The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins. Once the outcome is observed we are left to choose amongst the relatively few remaining answers associated with the bin.
 
-# Installing numba on Apple M1
+## Installing numba on Apple M1
 
 numba requires llvmlite, which in turn requires llvm version 11. The default installed version of llvm is likely more recent than version 11.
 
