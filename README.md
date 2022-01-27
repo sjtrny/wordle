@@ -78,7 +78,9 @@ of answers that fall in outcome i when playing the guess word.
 
 The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins. Once the outcome is observed we are left to choose amongst the relatively few remaining answers associated with the bin.
 
-# Installing Numba on Apple M1
+# Installing numba on Apple M1
+
+numba requires llvmlite, which in turn requires llvm version 11. The default installed version of llvm is likely more recent than version 11.
 
 1. Install llvm version 11
 
