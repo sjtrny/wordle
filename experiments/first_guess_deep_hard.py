@@ -1,4 +1,4 @@
-from wordle import Game, HardAgent
+from wordle import Game, MaxInfoHardAgent
 from wordle import get_numeric_representations, get_bin_counts, entropy
 import numpy as np
 from multiprocessing import Pool, cpu_count
@@ -7,7 +7,7 @@ import time
 
 def job(answer, first_guess, answers, guesses):
     g = Game(word=answer, verbose=False)
-    agent = HardAgent(answers, guesses, first_guess=first_guess)
+    agent = MaxInfoHardAgent(answers, guesses, first_guess=first_guess)
     (
         final_guess,
         n_guesses,

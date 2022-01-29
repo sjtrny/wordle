@@ -177,7 +177,17 @@ def get_numeric_representations(wordlist):
 
 
 class Agent(ABC):
-    def __init__(self, answers, guesses, first_guess="soare"):
+    @abstractmethod
+    def __init__(self, answers, guesses, first_guess=None):
+        pass
+
+    @abstractmethod
+    def play(self, game):
+        pass
+
+
+class MaxInfoAgent(Agent):
+    def __init__(self, answers, guesses, first_guess="reast"):
         self.answers = answers
         self.guesses = guesses
 
@@ -189,12 +199,8 @@ class Agent(ABC):
         )
         self.first_guess = first_guess
 
-    @abstractmethod
-    def play(self, game):
-        pass
 
-
-class StandardAgent(Agent):
+class MaxInfoStandardAgent(MaxInfoAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -261,7 +267,7 @@ class StandardAgent(Agent):
         return guess_history[-1], len(guess_history)
 
 
-class HardAgent(Agent):
+class MaxInfoHardAgent(MaxInfoAgent):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -331,7 +337,17 @@ class HardAgent(Agent):
         return guess_history[-1], len(guess_history)
 
 
-class Solver:
+class Solver(ABC):
+    @abstractmethod
+    def __init__(self, answers, guesses):
+        pass
+
+    @abstractmethod
+    @abstractmethod
+    def step(self, code=None, guess=None):
+        pass
+
+class MaxInfoSolver(Solver):
     def __init__(self, answers, guesses):
         self.answers = answers
         self.guesses = guesses
@@ -349,12 +365,7 @@ class Solver:
         self.guess_total_mask = np.ones(len(self.guesses)).astype(bool)
         self.answer_total_mask = np.ones(len(self.answers)).astype(bool)
 
-    @abstractmethod
-    def step(self, code=None, guess=None):
-        pass
-
-
-class StandardSolver(Solver):
+class MaxInfoStandardSolver(MaxInfoSolver):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -405,10 +416,10 @@ class StandardSolver(Solver):
             guess = np.array(self.answers)[self.answer_total_mask][0]
             remaining_guesses_sorted = []
 
-        return guess, remaining_guesses_sorted
+        return guess, np.array(self.answers)[self.answer_total_mask]
 
 
-class HardSolver(Solver):
+class MaxInfoHardSolver(MaxInfoSolver):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -463,4 +474,4 @@ class HardSolver(Solver):
             guess = np.array(self.answers)[self.answer_total_mask][0]
             remaining_guesses_sorted = []
 
-        return guess, remaining_guesses_sorted
+        return guess, np.array(self.answers)[self.answer_total_mask]

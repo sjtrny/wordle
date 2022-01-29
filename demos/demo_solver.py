@@ -1,11 +1,11 @@
-from wordle import StandardSolver
+from wordle import MaxInfoStandardSolver
 
 with open("../words_answers.txt", "r") as answers_file:
     answers = answers_file.read().splitlines()
 with open("../words_guesses.txt", "r") as guesses_file:
     guesses = guesses_file.read().splitlines()
 
-solver = StandardSolver(answers, guesses)
+solver = MaxInfoStandardSolver(answers, guesses)
 
 print("-----------------")
 print("WORDLE SOLVER")
@@ -37,10 +37,10 @@ while True:
         print("invalid input")
         continue
 
-    suggested_guess, remaining_guesses = solver.step(code, guess)
-    if (len(remaining_guesses)) > 0:
+    suggested_guess, remaining_answers = solver.step(code, guess)
+    if (len(remaining_answers)) > 1:
         print(
-            f"Next guess: {suggested_guess}, {len(remaining_guesses)} valid guess words remaining",
+            f"Next guess: {suggested_guess}, {len(remaining_answers)} answers remaining",
         )
     else:
         print(f"Answer is {suggested_guess}")
