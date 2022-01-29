@@ -89,3 +89,14 @@ numba requires llvmlite, which in turn requires llvm version 11. The default ins
 2. Install llvmlite by pointing to old llvm version
 
 `LLVM_CONFIG="/opt/homebrew/Cellar/llvm@11/11.1.0_3/bin/llvm-config" arch -arm64 pip install llvmlite`
+
+`pip install numba`
+
+# Installing scipy on Apple M1
+
+    brew install openblas
+    pip install --no-cache --no-use-pep517 pythran cython pybind11 gast
+    OPENBLAS="$(brew --prefix openblas)" pip install --no-cache --no-binary :all: --no-use-pep517 scipy
+
+
+

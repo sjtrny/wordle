@@ -32,7 +32,7 @@ def get_match_code_game(guess, answer):
     return result.tounicode()
 
 
-@jit(nopython=True)
+@jit(nopython=True, nogil=True)
 def get_match_code_int(guess_numba, answer_numba, answer_char_counts):
     result = 0
     answer_char_counts = answer_char_counts.copy()
@@ -51,8 +51,8 @@ def get_match_code_int(guess_numba, answer_numba, answer_char_counts):
 
         # If letter in answer
         if (
-            answer_char_counts[alphabet_idx] > 0
-            and guess_numba[letter_idx] != answer_numba[letter_idx]
+                answer_char_counts[alphabet_idx] > 0
+                and guess_numba[letter_idx] != answer_numba[letter_idx]
         ):
             result += 1 << letter_idx * 2
             answer_char_counts[alphabet_idx] -= 1
@@ -60,7 +60,7 @@ def get_match_code_int(guess_numba, answer_numba, answer_char_counts):
     return result
 
 
-@jit(nopython=True)
+@jit(nopython=True, nogil=True)
 def get_bin_counts(guesses, answers, answers_char_counts):
     n_codes = 1024  # 2 bits for 5 characters gives max 1024
 
@@ -81,6 +81,41 @@ def get_bin_counts(guesses, answers, answers_char_counts):
 
 
 @jit(nopython=True)
+def get_bin_table(guesses, answers, answers_char_counts):
+    bin_table = np.zeros((guesses.shape[0], answers.shape[0]), dtype=np.uint)
+
+    for guess_idx in range(guesses.shape[0]):
+        guess_array = guesses[guess_idx, :]
+
+        for answer_idx in range(answers.shape[0]):
+            bin_table[guess_idx, answer_idx] = get_match_code_int(
+                guess_array,
+                answers[answer_idx, :],
+                answers_char_counts[answer_idx, :],
+            )
+
+    return bin_table.T
+
+
+@jit(nopython=True)
+def bin_table_to_counts(bin_table, guess_mask, answer_mask):
+    n_codes = 1024  # 2 bits for 5 characters gives max 1024
+
+    n_guesses = np.sum(guess_mask)
+
+    counts = np.zeros((n_codes, n_guesses), dtype=np.intc)
+
+    # Returns non zero index for each axis, get first axis
+    guess_idxs = np.nonzero(guess_mask)[0]
+    answer_idxs = np.nonzero(answer_mask)[0]
+
+    for guess_idx in range(len(guess_idxs)):
+        for answer_idx in answer_idxs:
+            counts[bin_table[answer_idx, guess_idxs[guess_idx]], guess_idx] += 1
+    return counts
+
+
+@jit(nopython=True, nogil=True)
 def filter_hard(match_int, guess_numba, words_numba, word_char_counts, mask):
     match_codes = np.full((mask.shape[0],), 0)
 
@@ -131,8 +166,8 @@ def entropy(counts):
 
 
 def get_numeric_representations(wordlist):
-    words_numba = np.zeros((len(wordlist), 5), dtype=int)
-    words_char_counts = np.zeros((len(wordlist), len(alphabet)), dtype=int)
+    words_numba = np.zeros((len(wordlist), 5), dtype=np.intc)
+    words_char_counts = np.zeros((len(wordlist), len(alphabet)), dtype=np.intc)
     for w, word in enumerate(wordlist):
         for l, letter in enumerate(word):
             words_numba[w, l] = ord(letter) - 97
@@ -196,6 +231,7 @@ class StandardAgent(Agent):
             if np.sum(answer_total_mask) > 1:
                 # For whatever reason, indexing like this adds a dimension so we
                 # squeeze the dimensions
+
                 bin_counts = get_bin_counts(
                     self.guesses_numba[guess_total_mask, :].squeeze(),
                     self.answers_numba[answer_total_mask, :].squeeze(),
