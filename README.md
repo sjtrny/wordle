@@ -92,7 +92,7 @@ numba requires llvmlite, which in turn requires llvm version 11. The default ins
 
 `pip install numba`
 
-# Installing scipy on Apple M1
+## Installing scipy on Apple M1
 
     brew install openblas
     pip install --no-cache --no-use-pep517 pythran cython pybind11 gast
