@@ -127,6 +127,27 @@ def filter_hard(match_int, guess_numba, words_numba, word_char_counts, mask):
 
     return mask & (match_codes == match_int)
 
+def entropy(counts):
+    probabilities = counts / np.sum(counts, axis=0)
+
+    return -np.sum(
+        probabilities
+        * np.log(
+            probabilities, out=np.zeros_like(probabilities), where=probabilities != 0
+        ),
+        axis=0,
+    )
+
+
+def get_numeric_representations(wordlist):
+    words_numba = np.zeros((len(wordlist), 5), dtype=np.intc)
+    words_char_counts = np.zeros((len(wordlist), len(alphabet)), dtype=np.intc)
+    for w, word in enumerate(wordlist):
+        for l, letter in enumerate(word):
+            words_numba[w, l] = ord(letter) - 97
+            words_char_counts[w, ord(letter) - 97] += 1
+
+    return words_numba, words_char_counts
 
 class Game:
     def __init__(self, word=None, answers=None, verbose=False):
@@ -151,30 +172,6 @@ class Game:
                 return code
 
         return None
-
-
-def entropy(counts):
-    probabilities = counts / np.sum(counts, axis=0)
-
-    return -np.sum(
-        probabilities
-        * np.log(
-            probabilities, out=np.zeros_like(probabilities), where=probabilities != 0
-        ),
-        axis=0,
-    )
-
-
-def get_numeric_representations(wordlist):
-    words_numba = np.zeros((len(wordlist), 5), dtype=np.intc)
-    words_char_counts = np.zeros((len(wordlist), len(alphabet)), dtype=np.intc)
-    for w, word in enumerate(wordlist):
-        for l, letter in enumerate(word):
-            words_numba[w, l] = ord(letter) - 97
-            words_char_counts[w, ord(letter) - 97] += 1
-
-    return words_numba, words_char_counts
-
 
 class Agent(ABC):
     @abstractmethod
