@@ -32,7 +32,7 @@ def get_match_code_game(guess, answer):
     return result.tounicode()
 
 
-@jit(nopython=True, nogil=True)
+@jit(nopython=True, nogil=True, cache=True)
 def get_match_code_int(guess_numba, answer_numba, answer_char_counts):
     result = 0
     answer_char_counts = answer_char_counts.copy()
@@ -60,23 +60,15 @@ def get_match_code_int(guess_numba, answer_numba, answer_char_counts):
     return result
 
 
-@jit(nopython=True, nogil=True)
+@jit(nopython=True, nogil=True, cache=True)
 def get_bin_counts(guesses, answers, answers_char_counts):
     n_codes = 1024  # 2 bits for 5 characters gives max 1024
 
     counts = np.zeros((n_codes, guesses.shape[0]), dtype=np.intc)
 
-    # sample_size = (np.minimum(len(answers), 200),)
-
     for guess_idx in range(guesses.shape[0]):
-        # print(guesses)
+
         guess_array = guesses[guess_idx, :]
-
-        # sub_answer_idxs = np.random.choice(len(answers), size=sample_size, replace=True)
-
-        # for sub_answer_idx in range(sub_answer_idxs.shape[0]):
-        #
-        #     answer_idx = sub_answer_idxs[sub_answer_idx]
 
         for answer_idx in range(answers.shape[0]):
             result = get_match_code_int(
@@ -88,11 +80,13 @@ def get_bin_counts(guesses, answers, answers_char_counts):
 
     return counts
 
+
 # Using Dvoretzky-Kiefer-Wolfowitz inequality
 def min_samples(eps, alpha):
-    return (1 / (2*eps**2) ) * np.log(2/alpha)
+    return (1 / (2 * eps ** 2)) * np.log(2 / alpha)
 
-@jit(nopython=True, nogil=True)
+
+@jit(nopython=True, nogil=True, cache=True)
 def get_bin_counts_approximate(guesses, answers, answers_char_counts, sample_size):
     n_codes = 1024  # 2 bits for 5 characters gives max 1024
 
@@ -118,7 +112,7 @@ def get_bin_counts_approximate(guesses, answers, answers_char_counts, sample_siz
     return counts
 
 
-@jit(nopython=True)
+@jit(nopython=True, nogil=True, cache=True)
 def get_bin_table(guesses, answers, answers_char_counts):
     bin_table = np.zeros((guesses.shape[0], answers.shape[0]), dtype=np.uint)
 
@@ -135,7 +129,7 @@ def get_bin_table(guesses, answers, answers_char_counts):
     return bin_table.T
 
 
-@jit(nopython=True)
+@jit(nopython=True, nogil=True, cache=True)
 def bin_table_to_counts(bin_table, guess_mask, answer_mask):
     n_codes = 1024  # 2 bits for 5 characters gives max 1024
 
@@ -153,7 +147,7 @@ def bin_table_to_counts(bin_table, guess_mask, answer_mask):
     return counts
 
 
-@jit(nopython=True, nogil=True)
+@jit(nopython=True, nogil=True, cache=True)
 def filter_hard(match_int, guess_numba, words_numba, word_char_counts, mask):
     match_codes = np.full((mask.shape[0],), 0)
 
