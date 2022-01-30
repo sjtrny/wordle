@@ -66,10 +66,47 @@ def get_bin_counts(guesses, answers, answers_char_counts):
 
     counts = np.zeros((n_codes, guesses.shape[0]), dtype=np.intc)
 
+    # sample_size = (np.minimum(len(answers), 200),)
+
+    for guess_idx in range(guesses.shape[0]):
+        # print(guesses)
+        guess_array = guesses[guess_idx, :]
+
+        # sub_answer_idxs = np.random.choice(len(answers), size=sample_size, replace=True)
+
+        # for sub_answer_idx in range(sub_answer_idxs.shape[0]):
+        #
+        #     answer_idx = sub_answer_idxs[sub_answer_idx]
+
+        for answer_idx in range(answers.shape[0]):
+            result = get_match_code_int(
+                guess_array,
+                answers[answer_idx, :],
+                answers_char_counts[answer_idx, :],
+            )
+            counts[result, guess_idx] += 1
+
+    return counts
+
+def min_samples(eps, alpha):
+    return (1 / (2*eps**2) ) * np.log(2/alpha)
+
+@jit(nopython=True, nogil=True)
+def get_bin_counts_approximate(guesses, answers, answers_char_counts, sample_size):
+    n_codes = 1024  # 2 bits for 5 characters gives max 1024
+
+    counts = np.zeros((n_codes, guesses.shape[0]), dtype=np.intc)
+
+    sample_size = (np.minimum(len(answers), sample_size),)
+
     for guess_idx in range(guesses.shape[0]):
         guess_array = guesses[guess_idx, :]
 
-        for answer_idx in range(answers.shape[0]):
+        sub_answer_idxs = np.random.choice(len(answers), size=sample_size, replace=True)
+
+        for sub_answer_idx in range(sub_answer_idxs.shape[0]):
+            answer_idx = sub_answer_idxs[sub_answer_idx]
+
             result = get_match_code_int(
                 guess_array,
                 answers[answer_idx, :],
@@ -127,6 +164,7 @@ def filter_hard(match_int, guess_numba, words_numba, word_char_counts, mask):
 
     return mask & (match_codes == match_int)
 
+
 def entropy(counts):
     probabilities = counts / np.sum(counts, axis=0)
 
@@ -148,6 +186,7 @@ def get_numeric_representations(wordlist):
             words_char_counts[w, ord(letter) - 97] += 1
 
     return words_numba, words_char_counts
+
 
 class Game:
     def __init__(self, word=None, answers=None, verbose=False):
@@ -172,6 +211,7 @@ class Game:
                 return code
 
         return None
+
 
 class Agent(ABC):
     @abstractmethod
@@ -344,6 +384,7 @@ class Solver(ABC):
     def step(self, code=None, guess=None):
         pass
 
+
 class MaxInfoSolver(Solver):
     def __init__(self, answers, guesses):
         self.answers = answers
@@ -361,6 +402,7 @@ class MaxInfoSolver(Solver):
 
         self.guess_total_mask = np.ones(len(self.guesses)).astype(bool)
         self.answer_total_mask = np.ones(len(self.answers)).astype(bool)
+
 
 class MaxInfoStandardSolver(MaxInfoSolver):
     def __init__(self, *args, **kwargs):
