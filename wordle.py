@@ -88,6 +88,7 @@ def get_bin_counts(guesses, answers, answers_char_counts):
 
     return counts
 
+# Using Dvoretzky-Kiefer-Wolfowitz inequality
 def min_samples(eps, alpha):
     return (1 / (2*eps**2) ) * np.log(2/alpha)
 
