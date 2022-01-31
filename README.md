@@ -42,7 +42,7 @@ for interactive solving you can choose between StandardSolver and HardSolver.
 In terms of fewest average plays the optimal first word is `reast` when
 considering all possible outcomes.
 
-When considering only the first play the optimal first word is `soares`.
+When considering only the first play the optimal first word is `soare`.
 
 Run either `first_guess_{deep,shallow}_{standard,hard}.py` to replicate results.
 
