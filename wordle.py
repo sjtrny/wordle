@@ -184,7 +184,7 @@ def get_numeric_representations(wordlist):
 
 
 class Game:
-    def __init__(self, word=None, answers=None, verbose=False):
+    def __init__(self, word=None, answers=None, max_plays=6, verbose=False):
         if word:
             self.word = word
         elif answers:
@@ -192,7 +192,7 @@ class Game:
         else:
             raise ValueError("Must provide word or answers.")
 
-        self.max_plays = 6
+        self.max_plays = max_plays
         self.guess_list = []
         self.verbose = verbose
 
@@ -247,40 +247,45 @@ class MaxInfoAgent(NumbaAgent):
         guess_history = []
         code_history = []
 
-        guess_history.append(self.first_guess)
-        state = game.play(self.first_guess)
-        code_history.append(state)
-
         guess_total_mask = np.ones(len(self.guesses)).astype(bool)
         answer_total_mask = np.ones(len(self.answers)).astype(bool)
 
-        while state:
-            guess_idx = self.guesses.index(guess_history[-1])
-            # Translate match_code into integer
-            match_int = 0
-            for idx, c in enumerate(code_history[-1]):
-                match_int += int(c) << idx * 2
+        if self.first_guess:
+            guess_history.append(self.first_guess)
+            state = game.play(self.first_guess)
+            code_history.append(state)
 
-            if self.mode == "standard":
-                # Exclude previously guessed words
-                guess_total_mask[guess_idx] = False
-            else:
-                guess_total_mask = mask_candidates(
+        while True:
+
+            if len(guess_history) > 0:
+                guess_idx = self.guesses.index(guess_history[-1])
+                # Translate match_code into integer
+                match_int = 0
+                for idx, c in enumerate(code_history[-1]):
+                    match_int += int(c) << idx * 2
+
+                # Filter guesses and answers based on previous play
+                if self.mode == "standard":
+                    # Exclude previously guessed words
+                    guess_total_mask[guess_idx] = False
+                else:
+                    guess_total_mask = mask_candidates(
+                        match_int,
+                        self.guesses_numba[guess_idx, :],
+                        self.guesses_numba,
+                        self.guesses_char_counts,
+                        guess_total_mask,
+                    )
+
+                answer_total_mask = mask_candidates(
                     match_int,
                     self.guesses_numba[guess_idx, :],
-                    self.guesses_numba,
-                    self.guesses_char_counts,
-                    guess_total_mask,
+                    self.answers_numba,
+                    self.answers_char_counts,
+                    answer_total_mask,
                 )
 
-            answer_total_mask = mask_candidates(
-                match_int,
-                self.guesses_numba[guess_idx, :],
-                self.answers_numba,
-                self.answers_char_counts,
-                answer_total_mask,
-            )
-
+            # Determine best guess
             if np.sum(answer_total_mask) > 1:
                 # For whatever reason, indexing like this adds a dimension so we
                 # squeeze the dimensions
@@ -308,8 +313,12 @@ class MaxInfoAgent(NumbaAgent):
 
             guess_history.append(guess)
 
+            # Play
             state = game.play(guess)
             code_history.append(state)
+
+            if not state:
+                break
 
         return guess_history[-1], len(guess_history)
 
@@ -323,34 +332,42 @@ class MaxSplitsAgent(NumbaAgent):
         guess_history = []
         code_history = []
 
-        guess_history.append(self.first_guess)
-        state = game.play(self.first_guess)
-        code_history.append(state)
-
         guess_total_mask = np.ones(len(self.guesses)).astype(bool)
         answer_total_mask = np.ones(len(self.answers)).astype(bool)
 
-        while state:
-            guess_idx = self.guesses.index(guess_history[-1])
-            # Translate match_code into integer
-            match_int = 0
-            for idx, c in enumerate(code_history[-1]):
-                match_int += int(c) << idx * 2
+        if self.first_guess:
+            guess_history.append(self.first_guess)
+            state = game.play(self.first_guess)
+            code_history.append(state)
 
-            guess_total_mask = mask_candidates(
-                match_int,
-                self.guesses_numba[guess_idx, :],
-                self.guesses_numba,
-                self.guesses_char_counts,
-                guess_total_mask,
-            )
-            answer_total_mask = mask_candidates(
-                match_int,
-                self.guesses_numba[guess_idx, :],
-                self.answers_numba,
-                self.answers_char_counts,
-                answer_total_mask,
-            )
+        while True:
+
+            if len(guess_history) > 0:
+                guess_idx = self.guesses.index(guess_history[-1])
+                # Translate match_code into integer
+                match_int = 0
+                for idx, c in enumerate(code_history[-1]):
+                    match_int += int(c) << idx * 2
+
+                # Filter guesses and answers based on previous play
+                if self.mode == "standard":
+                    # Exclude previously guessed words
+                    guess_total_mask[guess_idx] = False
+                else:
+                    guess_total_mask = mask_candidates(
+                        match_int,
+                        self.guesses_numba[guess_idx, :],
+                        self.guesses_numba,
+                        self.guesses_char_counts,
+                        guess_total_mask,
+                    )
+                answer_total_mask = mask_candidates(
+                    match_int,
+                    self.guesses_numba[guess_idx, :],
+                    self.answers_numba,
+                    self.answers_char_counts,
+                    answer_total_mask,
+                )
 
             if np.sum(answer_total_mask) > 1:
                 # For whatever reason, indexing like this adds a dimension so we
@@ -381,6 +398,9 @@ class MaxSplitsAgent(NumbaAgent):
             state = game.play(guess)
             code_history.append(state)
 
+            if not state:
+                break
+
         return guess_history[-1], len(guess_history)
 
 
@@ -393,34 +413,42 @@ class MaxPruneAgent(NumbaAgent):
         guess_history = []
         code_history = []
 
-        guess_history.append(self.first_guess)
-        state = game.play(self.first_guess)
-        code_history.append(state)
-
         guess_total_mask = np.ones(len(self.guesses)).astype(bool)
         answer_total_mask = np.ones(len(self.answers)).astype(bool)
 
-        while state:
-            guess_idx = self.guesses.index(guess_history[-1])
-            # Translate match_code into integer
-            match_int = 0
-            for idx, c in enumerate(code_history[-1]):
-                match_int += int(c) << idx * 2
+        if self.first_guess:
+            guess_history.append(self.first_guess)
+            state = game.play(self.first_guess)
+            code_history.append(state)
 
-            guess_total_mask = mask_candidates(
-                match_int,
-                self.guesses_numba[guess_idx, :],
-                self.guesses_numba,
-                self.guesses_char_counts,
-                guess_total_mask,
-            )
-            answer_total_mask = mask_candidates(
-                match_int,
-                self.guesses_numba[guess_idx, :],
-                self.answers_numba,
-                self.answers_char_counts,
-                answer_total_mask,
-            )
+        while state:
+            if len(guess_history) > 0:
+                guess_idx = self.guesses.index(guess_history[-1])
+                # Translate match_code into integer
+                match_int = 0
+                for idx, c in enumerate(code_history[-1]):
+                    match_int += int(c) << idx * 2
+
+                # Filter guesses and answers based on previous play
+                if self.mode == "standard":
+                    # Exclude previously guessed words
+                    guess_total_mask[guess_idx] = False
+                else:
+                    guess_total_mask = mask_candidates(
+                        match_int,
+                        self.guesses_numba[guess_idx, :],
+                        self.guesses_numba,
+                        self.guesses_char_counts,
+                        guess_total_mask,
+                    )
+
+                answer_total_mask = mask_candidates(
+                    match_int,
+                    self.guesses_numba[guess_idx, :],
+                    self.answers_numba,
+                    self.answers_char_counts,
+                    answer_total_mask,
+                )
 
             if np.sum(answer_total_mask) > 1:
 
@@ -468,6 +496,9 @@ class MaxPruneAgent(NumbaAgent):
 
             state = game.play(guess)
             code_history.append(state)
+
+            if not state:
+                break
 
         return guess_history[-1], len(guess_history)
 
