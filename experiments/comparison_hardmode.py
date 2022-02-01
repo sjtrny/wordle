@@ -10,10 +10,14 @@ def job(job_dict, answers, guesses):
 
     for answer in answers:
         g = Game(word=answer, verbose=False)
+
         start_time = time.time()
+
         agent = job_dict["agent"](answers, guesses, mode="hard")
-        end_time = time.time()
         final_guess, n_guesses = agent.play(g)
+
+        end_time = time.time()
+
         results.append((final_guess, n_guesses, end_time - start_time))
 
     n_plays = np.array([result[1] for result in results])
