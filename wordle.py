@@ -404,6 +404,27 @@ class MaxSplitsAgent(NumbaAgent):
         return guess_history[-1], len(guess_history)
 
 
+@jit(nopython=True, nogil=True, cache=True)
+def get_total_unmatched(guesses, answers, answers_char_counts):
+    total_unmatched = np.zeros(guesses.shape[0], dtype=np.intc)
+
+    for guess_idx in range(guesses.shape[0]):
+
+        guess_array = guesses[guess_idx, :]
+
+        for answer_idx in range(answers.shape[0]):
+            match_int = get_match_code_int(
+                guess_array,
+                answers[answer_idx, :],
+                answers_char_counts[answer_idx, :],
+            )
+
+            if match_int == 0:
+                total_unmatched[guess_idx] += 1
+
+    return total_unmatched
+
+
 class MaxPruneAgent(NumbaAgent):
     def __init__(self, answers, guesses, mode="standard", first_guess="reast"):
         super().__init__(answers, guesses, mode, first_guess)
@@ -452,33 +473,11 @@ class MaxPruneAgent(NumbaAgent):
 
             if np.sum(answer_total_mask) > 1:
 
-                filtered_guesses_numba = self.guesses_numba[
-                    guess_total_mask, :
-                ].squeeze()
-                filtered_answers_numba = self.answers_numba[
-                    answer_total_mask, :
-                ].squeeze()
-                filtered_answers_char_counts = self.answers_char_counts[
-                    answer_total_mask, :
-                ].squeeze()
-
-                total_unmatched = np.zeros(
-                    filtered_guesses_numba.shape[0], dtype=np.intc
+                total_unmatched = get_total_unmatched(
+                    self.guesses_numba[guess_total_mask, :].squeeze(),
+                    self.answers_numba[answer_total_mask, :].squeeze(),
+                    self.answers_char_counts[answer_total_mask, :].squeeze(),
                 )
-
-                for guess_idx in range(filtered_guesses_numba.shape[0]):
-
-                    guess_array = filtered_guesses_numba[guess_idx, :]
-
-                    for answer_idx in range(filtered_answers_numba.shape[0]):
-                        match_int = get_match_code_int(
-                            guess_array,
-                            filtered_answers_numba[answer_idx, :],
-                            filtered_answers_char_counts[answer_idx, :],
-                        )
-
-                        if match_int == 0:
-                            total_unmatched[guess_idx] += 1
 
                 # Sort splits
                 sort_idx = np.argsort(total_unmatched)
