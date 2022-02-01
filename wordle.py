@@ -421,7 +421,7 @@ class MaxPruneAgent(NumbaAgent):
             state = game.play(self.first_guess)
             code_history.append(state)
 
-        while state:
+        while True:
             if len(guess_history) > 0:
                 guess_idx = self.guesses.index(guess_history[-1])
                 # Translate match_code into integer
