@@ -1,11 +1,11 @@
-from wordle import MaxInfoStandardSolver
+from wordle import MaxInfoSolver as Solver
 
 with open("../words_answers.txt", "r") as answers_file:
     answers = answers_file.read().splitlines()
 with open("../words_guesses.txt", "r") as guesses_file:
     guesses = guesses_file.read().splitlines()
 
-solver = MaxInfoStandardSolver(answers, guesses)
+solver = Solver(answers, guesses, mode="standard")
 
 print("-----------------")
 print("WORDLE SOLVER")

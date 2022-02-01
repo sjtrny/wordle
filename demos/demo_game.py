@@ -1,14 +1,20 @@
-from wordle import Game, MaxInfoStandardAgent
+from wordle import Game, MaxInfoAgent as Agent
+import time
 
 with open("../words_answers.txt", "r") as answers_file:
     answers = answers_file.read().splitlines()
 with open("../words_guesses.txt", "r") as guesses_file:
     guesses = guesses_file.read().splitlines()
 
-g = Game(word="crimp", verbose=True)
-agent = MaxInfoStandardAgent(answers, guesses, first_guess="arise")
+g = Game(word="admin", verbose=True)
+start = time.time()
+agent = Agent(answers, guesses, mode="standard", first_guess="reast")
 (
     final_guess,
-    _,
+    n_guesses,
 ) = agent.play(g)
-print(final_guess)
+end = time.time()
+
+print(
+    f"Solution: '{final_guess}' found with {n_guesses} guesses in {end-start:.2f} seconds"
+)

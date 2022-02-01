@@ -1,0 +1,4 @@
+agent,agent_name,mean_n_plays,failed_words,mean_play_time
+<class 'wordle.MaxInfoAgent'>,MaxInfoAgent,3.6488120950323975,[],0.08952439341122852
+<class 'wordle.MaxSplitsAgent'>,MaxSplitsAgent,3.6505399568034558,[],0.08763036799997284
+<class 'wordle.MaxPruneAgent'>,MaxPruneAgent,3.7840172786177106,[],0.08713264125469694
