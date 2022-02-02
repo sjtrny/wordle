@@ -1,4 +1,4 @@
 agent,agent_name,mean_n_plays,failed_words,mean_play_time
-<class 'wordle.MaxInfoAgent'>,MaxInfoAgent,3.600431965442765,[],0.08733553422964932
-<class 'wordle.MaxSplitsAgent'>,MaxSplitsAgent,3.6505399568034558,[],0.0908472201221705
-<class 'wordle.MaxPruneAgent'>,MaxPruneAgent,3.7840172786177106,[],0.08950124847708717
+<class 'wordle.MaxInfoAgent'>,MaxInfoAgent,3.600431965442765,[],0.3210737186168234
+<class 'wordle.MaxSplitsAgent'>,MaxSplitsAgent,3.6207343412527,[],0.1431777768722106
+<class 'wordle.MaxPruneAgent'>,MaxPruneAgent,4.439469320066335,['sissy' 'awake' 'blush' ... 'judge' 'rower' 'shave'],0.10242607364211707
