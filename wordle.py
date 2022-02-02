@@ -171,7 +171,6 @@ def entropy(counts):
         axis=0,
     )
 
-
 def get_numeric_representations(wordlist):
     words_numba = np.zeros((len(wordlist), 5), dtype=np.intc)
     words_char_counts = np.zeros((len(wordlist), len(alphabet)), dtype=np.intc)
@@ -209,6 +208,11 @@ class Game:
 
 
 class Agent(ABC):
+    @staticmethod
+    @abstractmethod
+    def order_guesses(guesses_numba, answers_numba, answers_char_counts):
+        pass
+
     @abstractmethod
     def __init__(self, answers, guesses, mode="standard", first_guess=None):
         pass
@@ -217,31 +221,31 @@ class Agent(ABC):
     def play(self, game):
         pass
 
-
 class NumbaAgent(Agent):
-    def __init__(self, answers, guesses, mode="standard", first_guess=None):
+    # @profile
+    def __init__(self, answers, guesses, mode="standard", first_guess=None, guess_data=None, answer_data=None):
         self.answers = answers
         self.guesses = guesses
 
-        self.guesses_numba, self.guesses_char_counts = get_numeric_representations(
-            self.guesses
-        )
-        self.answers_numba, self.answers_char_counts = get_numeric_representations(
-            self.answers
-        )
+        if not guess_data:
+            self.guesses_numba, self.guesses_char_counts = get_numeric_representations(
+                self.guesses
+            )
+        else:
+            self.guesses_numba, self.guesses_char_counts = guess_data
+
+        if not answer_data:
+            self.answers_numba, self.answers_char_counts = get_numeric_representations(
+                self.answers
+            )
+        else:
+            self.answers_numba, self.answers_char_counts = answer_data
 
         self.mode = mode
         self.first_guess = first_guess
 
-    @abstractmethod
-    def play(self, game):
-        pass
 
-
-class MaxInfoAgent(NumbaAgent):
-    def __init__(self, answers, guesses, mode="standard", first_guess="reast"):
-        super().__init__(answers, guesses, mode, first_guess)
-
+    # @profile
     def play(self, game):
 
         guess_history = []
@@ -254,6 +258,9 @@ class MaxInfoAgent(NumbaAgent):
             guess_history.append(self.first_guess)
             state = game.play(self.first_guess)
             code_history.append(state)
+
+            if not state:
+                return guess_history[-1], len(guess_history)
 
         while True:
 
@@ -287,26 +294,18 @@ class MaxInfoAgent(NumbaAgent):
 
             # Determine best guess
             if np.sum(answer_total_mask) > 1:
-                # For whatever reason, indexing like this adds a dimension so we
-                # squeeze the dimensions
 
-                bin_counts = get_bin_counts(
+                sort_idx = self.order_guesses(
                     self.guesses_numba[guess_total_mask, :].squeeze(),
                     self.answers_numba[answer_total_mask, :].squeeze(),
                     self.answers_char_counts[answer_total_mask, :].squeeze(),
                 )
 
-                # Compute Entropy
-                guesses_entropy = entropy(bin_counts)
-
-                # Sort entropy
-                sort_idx = np.argsort(guesses_entropy)
-
                 # Select best word
                 remaining_guesses = np.array(self.guesses)[guess_total_mask]
                 remaining_guesses_sorted = remaining_guesses[sort_idx]
 
-                guess = remaining_guesses_sorted[-1]
+                guess = remaining_guesses_sorted[0]
 
             else:
                 guess = np.array(self.answers)[answer_total_mask][0]
@@ -323,85 +322,47 @@ class MaxInfoAgent(NumbaAgent):
         return guess_history[-1], len(guess_history)
 
 
+class MaxInfoAgent(NumbaAgent):
+    def __init__(self, answers, guesses, mode="standard", first_guess="reast", guess_data=None, answer_data=None):
+        super().__init__(answers, guesses, mode, first_guess, guess_data, answer_data)
+
+    @staticmethod
+    def order_guesses(guesses_numba, answers_numba, answers_char_counts):
+
+        bin_counts = get_bin_counts(
+            guesses_numba,
+            answers_numba,
+            answers_char_counts,
+        )
+
+        # Compute Entropy
+        guesses_entropy = entropy(bin_counts)
+
+        # Sort entropy
+        sort_idx = np.flip(np.argsort(guesses_entropy))
+
+        return sort_idx
+
+
 class MaxSplitsAgent(NumbaAgent):
-    def __init__(self, answers, guesses, mode="standard", first_guess="reast"):
-        super().__init__(answers, guesses, mode, first_guess)
+    def __init__(self, answers, guesses, mode="standard", first_guess="soare", guess_data=None, answer_data=None):
+        super().__init__(answers, guesses, mode, first_guess, guess_data, answer_data)
 
-    def play(self, game):
+    @staticmethod
+    def order_guesses(guesses_numba, answers_numba, answers_char_counts):
+        bin_counts = get_bin_counts(
+            guesses_numba,
+            answers_numba,
+            answers_char_counts,
+        )
 
-        guess_history = []
-        code_history = []
+        # Compute Number of Splits
+        guesses_nsplits = np.count_nonzero(bin_counts, axis=0)
 
-        guess_total_mask = np.ones(len(self.guesses)).astype(bool)
-        answer_total_mask = np.ones(len(self.answers)).astype(bool)
+        # Sort splits
+        sort_idx = np.flip(np.argsort(guesses_nsplits))
 
-        if self.first_guess:
-            guess_history.append(self.first_guess)
-            state = game.play(self.first_guess)
-            code_history.append(state)
-
-        while True:
-
-            if len(guess_history) > 0:
-                guess_idx = self.guesses.index(guess_history[-1])
-                # Translate match_code into integer
-                match_int = 0
-                for idx, c in enumerate(code_history[-1]):
-                    match_int += int(c) << idx * 2
-
-                # Filter guesses and answers based on previous play
-                if self.mode == "standard":
-                    # Exclude previously guessed words
-                    guess_total_mask[guess_idx] = False
-                else:
-                    guess_total_mask = mask_candidates(
-                        match_int,
-                        self.guesses_numba[guess_idx, :],
-                        self.guesses_numba,
-                        self.guesses_char_counts,
-                        guess_total_mask,
-                    )
-                answer_total_mask = mask_candidates(
-                    match_int,
-                    self.guesses_numba[guess_idx, :],
-                    self.answers_numba,
-                    self.answers_char_counts,
-                    answer_total_mask,
-                )
-
-            if np.sum(answer_total_mask) > 1:
-                # For whatever reason, indexing like this adds a dimension so we
-                # squeeze the dimensions
-                bin_counts = get_bin_counts(
-                    self.guesses_numba[guess_total_mask, :].squeeze(),
-                    self.answers_numba[answer_total_mask, :].squeeze(),
-                    self.answers_char_counts[answer_total_mask, :].squeeze(),
-                )
-
-                # Compute Number of Splits
-                guesses_nsplits = np.count_nonzero(bin_counts, axis=0)
-
-                # Sort splits
-                sort_idx = np.argsort(guesses_nsplits)
-
-                # Select best word
-                remaining_guesses = np.array(self.guesses)[guess_total_mask]
-                remaining_guesses_sorted = remaining_guesses[sort_idx]
-
-                guess = remaining_guesses_sorted[-1]
-
-            else:
-                guess = np.array(self.answers)[answer_total_mask][0]
-
-            guess_history.append(guess)
-
-            state = game.play(guess)
-            code_history.append(state)
-
-            if not state:
-                break
-
-        return guess_history[-1], len(guess_history)
+        return sort_idx
 
 
 @jit(nopython=True, nogil=True, cache=True)
@@ -426,80 +387,21 @@ def get_total_unmatched(guesses, answers, answers_char_counts):
 
 
 class MaxPruneAgent(NumbaAgent):
-    def __init__(self, answers, guesses, mode="standard", first_guess="reast"):
-        super().__init__(answers, guesses, mode, first_guess)
+    def __init__(self, answers, guesses, mode="standard", first_guess="soare", guess_data=None, answer_data=None):
+        super().__init__(answers, guesses, mode, first_guess, guess_data, answer_data)
 
-    def play(self, game):
+    @staticmethod
+    def order_guesses(guesses_numba, answers_numba, answers_char_counts):
 
-        guess_history = []
-        code_history = []
+        total_unmatched = get_total_unmatched(
+            guesses_numba,
+            answers_numba,
+            answers_char_counts,
+        )
 
-        guess_total_mask = np.ones(len(self.guesses)).astype(bool)
-        answer_total_mask = np.ones(len(self.answers)).astype(bool)
+        sort_idx = np.argsort(total_unmatched)
 
-        if self.first_guess:
-            guess_history.append(self.first_guess)
-            state = game.play(self.first_guess)
-            code_history.append(state)
-
-        while True:
-            if len(guess_history) > 0:
-                guess_idx = self.guesses.index(guess_history[-1])
-                # Translate match_code into integer
-                match_int = 0
-                for idx, c in enumerate(code_history[-1]):
-                    match_int += int(c) << idx * 2
-
-                # Filter guesses and answers based on previous play
-                if self.mode == "standard":
-                    # Exclude previously guessed words
-                    guess_total_mask[guess_idx] = False
-                else:
-                    guess_total_mask = mask_candidates(
-                        match_int,
-                        self.guesses_numba[guess_idx, :],
-                        self.guesses_numba,
-                        self.guesses_char_counts,
-                        guess_total_mask,
-                    )
-
-                answer_total_mask = mask_candidates(
-                    match_int,
-                    self.guesses_numba[guess_idx, :],
-                    self.answers_numba,
-                    self.answers_char_counts,
-                    answer_total_mask,
-                )
-
-            if np.sum(answer_total_mask) > 1:
-
-                total_unmatched = get_total_unmatched(
-                    self.guesses_numba[guess_total_mask, :].squeeze(),
-                    self.answers_numba[answer_total_mask, :].squeeze(),
-                    self.answers_char_counts[answer_total_mask, :].squeeze(),
-                )
-
-                # Sort splits
-                sort_idx = np.argsort(total_unmatched)
-
-                # Select best word
-                remaining_guesses = np.array(self.guesses)[guess_total_mask]
-                remaining_guesses_sorted = remaining_guesses[sort_idx]
-
-                guess = remaining_guesses_sorted[0]
-
-            else:
-                guess = np.array(self.answers)[answer_total_mask][0]
-
-            guess_history.append(guess)
-
-            state = game.play(guess)
-            code_history.append(state)
-
-            if not state:
-                break
-
-        return guess_history[-1], len(guess_history)
+        return sort_idx
 
 
 class Solver(ABC):

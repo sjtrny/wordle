@@ -2,9 +2,11 @@
 
 A fast solver for wordle written in Python using numba.
 
-On my MacBook Pro (13-inch, M1, 2020) it takes:
-- 3 seconds to compute the optimal word for the first play
-- 30 minutes to compute the optimal word considering all outcomes
+For the maximum information policy it takes:
+- 3 seconds to compute the optimal starting word for first play
+- 30 minutes to compute the optimal starting word considering all future plays
+
+Test conducted on MacBook Pro (13-inch, M1, 2020)
 
 ## Interactive Solver
 
