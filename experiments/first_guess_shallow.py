@@ -1,37 +1,44 @@
-from wordle import get_numeric_representations, get_bin_counts, entropy
-import numpy as np
+from wordle import Game, MaxInfoAgent, MaxSplitsAgent, MaxPruneAgent
+from multiprocessing import Pool, cpu_count
 import time
+import pandas as pd
 
-with open("../words_answers.txt", "r") as answers_file:
-    answers = answers_file.read().splitlines()
-with open("../words_guesses.txt", "r") as guesses_file:
-    guesses = guesses_file.read().splitlines()
 
-start_time = time.time()
+def job(job_dict, answers, guesses):
 
-guesses_numba, _ = get_numeric_representations(guesses)
-answers_numba, answers_char_counts = get_numeric_representations(answers)
+    g = Game(word="DUMMY_WORD", max_plays=1, verbose=False)
 
-bin_counts = get_bin_counts(
-    guesses_numba,
-    answers_numba,
-    answers_char_counts,
-)
+    start_time = time.time()
 
-# Compute Entropy
-guesses_entropy = entropy(bin_counts)
+    agent = job_dict["agent"](answers, guesses, first_guess=None)
+    final_guess, _ = agent.play(g)
 
-# Sort by entropy
-sort_idx = np.flip(np.argsort(guesses_entropy))
+    end_time = time.time()
 
-stop_time = time.time()
+    job_dict.update(
+        {
+            "agent_name": job_dict["agent"].__name__,
+            "first_word": final_guess,
+            "time_taken": end_time - start_time,
+        }
+    )
 
-print(
-    f"Optimal start word: {guesses[sort_idx[0]]}, computed in {stop_time-start_time:.2f} seconds."
-)
+    return job_dict
 
-f = open("first_guess_shallow.csv", "w")
-f.write("guess,entropy\n")
-for i in range(len(guesses)):
-    f.write(f"{guesses[sort_idx[i]]},{guesses_entropy[sort_idx[i]]}\n")
-f.close()
+
+if __name__ == "__main__":
+
+    with open("../words_answers.txt", "r") as answers_file:
+        answers = answers_file.read().splitlines()
+    with open("../words_guesses.txt", "r") as guesses_file:
+        guesses = guesses_file.read().splitlines()
+
+    agent_list = [MaxInfoAgent, MaxSplitsAgent, MaxPruneAgent]
+
+    pool = Pool(cpu_count())
+
+    results = pool.starmap(
+        job, (({"agent": agent}, answers, guesses) for agent in agent_list)
+    )
+
+    pd.DataFrame(results).to_csv("first_guess_shallow.csv", index=False)

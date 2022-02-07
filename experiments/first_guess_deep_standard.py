@@ -1,21 +1,91 @@
-from wordle import Game, MaxInfoStandardAgent
-from wordle import get_numeric_representations, get_bin_counts, entropy
-import numpy as np
+from wordle import Game, MaxInfoAgent, MaxSplitsAgent, MaxPruneAgent
+from wordle import get_numeric_representations, get_bin_table, bin_table_to_counts
 from multiprocessing import Pool, cpu_count
 import time
+import pandas as pd
+import numpy as np
+import itertools
 
 
-def job(answer, first_guess, answers, guesses):
-    g = Game(word=answer, verbose=False)
-    agent = MaxInfoStandardAgent(answers, guesses, first_guess=first_guess)
-    (
-        final_guess,
-        n_guesses,
-    ) = agent.play(g)
-    if final_guess == answer:
-        return answer, n_guesses
-    else:
-        return answer, np.nan
+def sub_job(agent_cls, sub_guesses, answers, guesses):
+
+    guesses_numba, guesses_char_counts = get_numeric_representations(guesses)
+    answers_numba, answers_char_counts = get_numeric_representations(answers)
+
+    bin_table = get_bin_table(guesses_numba, answers_numba, answers_char_counts)
+
+    sub_guess_results = []
+
+    for guess_idx, first_guess in enumerate(sub_guesses):
+        print(first_guess)
+        for answer_idx, answer in enumerate(answers):
+            g = Game(word=answer, verbose=False)
+
+            start_time = time.time()
+            agent = agent_cls(
+                answers,
+                guesses,
+                mode="standard",
+                first_guess=first_guess,
+                guess_data=(guesses_numba, guesses_char_counts),
+                answer_data=(answers_numba, answers_char_counts),
+                bin_table=bin_table,
+            )
+            final_guess, n_guesses = agent.play(g)
+            end_time = time.time()
+
+            sub_guess_results.append(
+                (first_guess, answer, final_guess, n_guesses, end_time - start_time)
+            )
+
+    return sub_guess_results
+
+
+def job(job_dict, answers, guesses):
+
+    agent_cls = job_dict["agent"]
+    print(agent_cls.__name__)
+
+    top_n = np.minimum(len(guesses), job_dict["top_n"])
+
+    # SELECT TOP N STARTING WORDS
+    # This needs to change depending on the agent
+
+    guesses_numba, guesses_char_counts = get_numeric_representations(guesses)
+    answers_numba, answers_char_counts = get_numeric_representations(answers)
+
+    bin_table = get_bin_table(guesses_numba, answers_numba, answers_char_counts)
+
+    bin_counts = bin_table_to_counts(
+        bin_table, np.full(len(guesses), True), np.full(len(answers), True)
+    )
+
+    sort_idx = agent_cls.order_guesses(bin_counts)
+
+    # Select best word
+    guesses_sorted = np.array(guesses)[sort_idx]
+    guesses_sorted = guesses_sorted[:top_n]
+
+    split_guesses = np.array_split(guesses_sorted, cpu_count())
+
+    pool = Pool(cpu_count())
+
+    total_result_lists = pool.starmap(
+        sub_job,
+        (
+            (
+                job_dict["agent"],
+                sub_guesses,
+                answers,
+                guesses,
+            )
+            for sub_guesses in split_guesses
+        ),
+    )
+
+    total_results = list(itertools.chain.from_iterable(total_result_lists))
+
+    return total_results
 
 
 if __name__ == "__main__":
@@ -24,51 +94,31 @@ if __name__ == "__main__":
     with open("../words_guesses.txt", "r") as guesses_file:
         guesses = guesses_file.read().splitlines()
 
-    start_time = time.time()
+    agent_list = [MaxInfoAgent, MaxSplitsAgent, MaxPruneAgent]
 
-    guesses_numba, _ = get_numeric_representations(guesses)
-    answers_numba, answers_char_counts = get_numeric_representations(answers)
+    start = time.time()
+    results_per_agent = [
+        job({"agent": agent, "top_n": 100}, answers, guesses) for agent in agent_list
+    ]
+    end = time.time()
+    print("completed in", end - start)
 
-    bin_counts = get_bin_counts(
-        guesses_numba,
-        answers_numba,
-        answers_char_counts,
-    )
+    cols = ["first_guess", "answer", "final_guess", "n_guesses", "play_time"]
 
-    # Compute Entropy
-    guesses_entropy = entropy(bin_counts)
-    sort_idx = np.argsort(guesses_entropy)
-    guesses_sorted = np.flip(np.array(guesses)[sort_idx])
+    dataframes = [
+        pd.DataFrame(agent_result, columns=cols) for agent_result in results_per_agent
+    ]
 
-    pool = Pool(cpu_count())
+    for dataframe_idx, dataframe in enumerate(dataframes):
+        dataframe["agent"] = agent_list[dataframe_idx].__name__
 
-    # How many guesses to check
-    n_guesses = 100
+    results = pd.concat(dataframes, axis=0)
 
-    n_plays = np.zeros((len(answers), n_guesses))
+    results[results["answer"] != "final_guess"][["n_guesses", "play_time"]] = np.NaN
 
-    for i in range(n_guesses):
-        print(f"{i+1}/{n_guesses}", guesses_sorted[i])
-        results = pool.starmap(
-            job, ((answer, guesses_sorted[i], answers, guesses) for answer in answers)
-        )
+    results.to_csv("first_guess_deep_standardmode.csv", index=False)
 
-        n_plays[:, i] = np.array([result[1] for result in results])
+    # Summarise results
 
-    mean_plays = np.nanmean(n_plays, axis=0)
-
-    stop_time = time.time()
-
-    mean_plays_sort_idx = np.argsort(mean_plays)
-
-    print(
-        f"Optimal start word: {guesses_sorted[mean_plays_sort_idx[0]]}, computed in {stop_time - start_time:.2f} seconds."
-    )
-
-    f = open("first_guess_deep_standard.csv", "w")
-    f.write("guess,mean_plays\n")
-    for i in range(n_guesses):
-        f.write(
-            f"{guesses_sorted[mean_plays_sort_idx[i]]},{mean_plays[mean_plays_sort_idx[i]]}\n"
-        )
-    f.close()
+    summary = results.groupby(["agent", "first_guess"]).mean().sort_values("n_guesses")
+    summary.to_csv("first_guess_deep_standardmode_summary.csv")

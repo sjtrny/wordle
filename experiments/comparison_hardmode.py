@@ -6,6 +6,7 @@ import time
 import pandas as pd
 import itertools
 
+
 def sub_job(agent_cls, sub_answers, answers, guesses):
 
     guesses_numba, guesses_char_counts = get_numeric_representations(guesses)
@@ -18,8 +19,13 @@ def sub_job(agent_cls, sub_answers, answers, guesses):
 
         start_time = time.time()
 
-        agent = agent_cls(answers, guesses, mode="hard", guess_data=(guesses_numba, guesses_char_counts),
-                                  answer_data=(answers_numba, answers_char_counts))
+        agent = agent_cls(
+            answers,
+            guesses,
+            mode="hard",
+            guess_data=(guesses_numba, guesses_char_counts),
+            answer_data=(answers_numba, answers_char_counts),
+        )
         final_guess, n_guesses = agent.play(g)
 
         end_time = time.time()
@@ -37,7 +43,10 @@ def job(job_dict, answers, guesses):
 
     total_result_lists = pool.starmap(
         sub_job,
-        ((job_dict["agent"], sub_answers, answers, guesses) for sub_answers in split_answers)
+        (
+            (job_dict["agent"], sub_answers, answers, guesses)
+            for sub_answers in split_answers
+        ),
     )
 
     total_results = list(itertools.chain.from_iterable(total_result_lists))
@@ -77,8 +86,6 @@ if __name__ == "__main__":
 
     agent_list = [MaxInfoAgent, MaxSplitsAgent, MaxPruneAgent]
 
-    results = [
-        job({"agent": agent}, answers, guesses) for agent in agent_list
-    ]
+    results = [job({"agent": agent}, answers, guesses) for agent in agent_list]
 
     pd.DataFrame(results).to_csv("comparison_hardmode.csv", index=False)

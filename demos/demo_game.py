@@ -7,10 +7,10 @@ with open("../words_answers.txt", "r") as answers_file:
 with open("../words_guesses.txt", "r") as guesses_file:
     guesses = guesses_file.read().splitlines()
 
-g = Game(word="admin", verbose=False)
+g = Game(word="admin", verbose=True)
 
 start = time.time()
-agent = Agent(answers, guesses, mode="hard", first_guess="reast")
+agent = Agent(answers, guesses, mode="standard", first_guess="reast")
 (
     final_guess,
     n_guesses,

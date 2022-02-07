@@ -18,7 +18,7 @@ print(
 )
 print("-----------------")
 
-print(f"Optimal starting guess: reast")
+print("Optimal starting guess: reast")
 
 while True:
     print("-----------------")
@@ -33,7 +33,7 @@ while True:
         code = user_in_list[1]
         if not len(guess) == 5 and not len(code) == 5:
             raise Exception
-    except:
+    except Exception:
         print("invalid input")
         continue
 

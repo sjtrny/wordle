@@ -3,6 +3,7 @@ import string
 from numba import jit
 from abc import ABC, abstractmethod
 import array
+from scipy.stats import entropy
 
 alphabet = string.ascii_lowercase
 
@@ -81,6 +82,24 @@ def get_bin_counts(guesses, answers, answers_char_counts):
     return counts
 
 
+def information_gain(bin_counts):
+    full_entropy = -np.log(1 / bin_counts.shape[1])
+
+    conditional_entropy = (
+        bin_counts
+        / bin_counts.sum(axis=0)
+        * -np.log(
+            np.divide(
+                1, bin_counts, out=np.zeros(bin_counts.shape), where=bin_counts != 0
+            ),
+            out=np.zeros(bin_counts.shape),
+            where=bin_counts != 0,
+        )
+    )
+
+    return full_entropy - np.nansum(conditional_entropy, axis=0)
+
+
 # Using Dvoretzky-Kiefer-Wolfowitz inequality
 def min_samples(eps, alpha):
     return (1 / (2 * eps**2)) * np.log(2 / alpha)
@@ -133,13 +152,11 @@ def get_bin_table(guesses, answers, answers_char_counts):
 def bin_table_to_counts(bin_table, guess_mask, answer_mask):
     n_codes = 1024  # 2 bits for 5 characters gives max 1024
 
-    n_guesses = np.sum(guess_mask)
-
-    counts = np.zeros((n_codes, n_guesses), dtype=np.intc)
-
     # Returns non zero index for each axis, get first axis
     guess_idxs = np.nonzero(guess_mask)[0]
     answer_idxs = np.nonzero(answer_mask)[0]
+
+    counts = np.zeros((n_codes, len(guess_idxs)), dtype=np.intc)
 
     for guess_idx in range(len(guess_idxs)):
         for answer_idx in answer_idxs:
@@ -159,17 +176,6 @@ def mask_candidates(match_int, guess_numba, words_numba, word_char_counts, mask)
 
     return mask & (match_codes == match_int)
 
-
-def entropy(counts):
-    probabilities = counts / np.sum(counts, axis=0)
-
-    return -np.sum(
-        probabilities
-        * np.log(
-            probabilities, out=np.zeros_like(probabilities), where=probabilities != 0
-        ),
-        axis=0,
-    )
 
 def get_numeric_representations(wordlist):
     words_numba = np.zeros((len(wordlist), 5), dtype=np.intc)
@@ -210,7 +216,7 @@ class Game:
 class Agent(ABC):
     @staticmethod
     @abstractmethod
-    def order_guesses(guesses_numba, answers_numba, answers_char_counts):
+    def order_guesses(bin_counts):
         pass
 
     @abstractmethod
@@ -221,11 +227,28 @@ class Agent(ABC):
     def play(self, game):
         pass
 
+
 class NumbaAgent(Agent):
     # @profile
-    def __init__(self, answers, guesses, mode="standard", first_guess=None, guess_data=None, answer_data=None):
+    def __init__(
+        self,
+        answers,
+        guesses,
+        mode="standard",
+        first_guess=None,
+        guess_data=None,
+        answer_data=None,
+        bin_table=None,
+    ):
         self.answers = answers
         self.guesses = guesses
+
+        self.mode = mode
+
+        if type(first_guess) == dict:
+            self.first_guess = first_guess[mode]
+        else:
+            self.first_guess = first_guess
 
         if not guess_data:
             self.guesses_numba, self.guesses_char_counts = get_numeric_representations(
@@ -241,9 +264,7 @@ class NumbaAgent(Agent):
         else:
             self.answers_numba, self.answers_char_counts = answer_data
 
-        self.mode = mode
-        self.first_guess = first_guess
-
+        self.bin_table = bin_table
 
     # @profile
     def play(self, game):
@@ -295,11 +316,18 @@ class NumbaAgent(Agent):
             # Determine best guess
             if np.sum(answer_total_mask) > 1:
 
-                sort_idx = self.order_guesses(
-                    self.guesses_numba[guess_total_mask, :].squeeze(),
-                    self.answers_numba[answer_total_mask, :].squeeze(),
-                    self.answers_char_counts[answer_total_mask, :].squeeze(),
-                )
+                if not isinstance(self.bin_table, None):
+                    bin_counts = bin_table_to_counts(
+                        self.bin_table, guess_total_mask, answer_total_mask
+                    )
+                else:
+                    bin_counts = get_bin_counts(
+                        self.guesses_numba[guess_total_mask, :].squeeze(),
+                        self.answers_numba[answer_total_mask, :].squeeze(),
+                        self.answers_char_counts[answer_total_mask, :].squeeze(),
+                    )
+
+                sort_idx = self.order_guesses(bin_counts)
 
                 # Select best word
                 remaining_guesses = np.array(self.guesses)[guess_total_mask]
@@ -323,17 +351,22 @@ class NumbaAgent(Agent):
 
 
 class MaxInfoAgent(NumbaAgent):
-    def __init__(self, answers, guesses, mode="standard", first_guess="reast", guess_data=None, answer_data=None):
-        super().__init__(answers, guesses, mode, first_guess, guess_data, answer_data)
+    def __init__(
+        self,
+        answers,
+        guesses,
+        mode="standard",
+        first_guess={"standard": "reast", "hard": "reast"},
+        guess_data=None,
+        answer_data=None,
+        bin_table=None,
+    ):
+        super().__init__(
+            answers, guesses, mode, first_guess, guess_data, answer_data, bin_table
+        )
 
     @staticmethod
-    def order_guesses(guesses_numba, answers_numba, answers_char_counts):
-
-        bin_counts = get_bin_counts(
-            guesses_numba,
-            answers_numba,
-            answers_char_counts,
-        )
+    def order_guesses(bin_counts):
 
         # Compute Entropy
         guesses_entropy = entropy(bin_counts)
@@ -345,16 +378,22 @@ class MaxInfoAgent(NumbaAgent):
 
 
 class MaxSplitsAgent(NumbaAgent):
-    def __init__(self, answers, guesses, mode="standard", first_guess="soare", guess_data=None, answer_data=None):
-        super().__init__(answers, guesses, mode, first_guess, guess_data, answer_data)
+    def __init__(
+        self,
+        answers,
+        guesses,
+        mode="standard",
+        first_guess={"standard": "trace", "hard": "salet"},
+        guess_data=None,
+        answer_data=None,
+        bin_table=None,
+    ):
+        super().__init__(
+            answers, guesses, mode, first_guess, guess_data, answer_data, bin_table
+        )
 
     @staticmethod
-    def order_guesses(guesses_numba, answers_numba, answers_char_counts):
-        bin_counts = get_bin_counts(
-            guesses_numba,
-            answers_numba,
-            answers_char_counts,
-        )
+    def order_guesses(bin_counts):
 
         # Compute Number of Splits
         guesses_nsplits = np.count_nonzero(bin_counts, axis=0)
@@ -365,39 +404,24 @@ class MaxSplitsAgent(NumbaAgent):
         return sort_idx
 
 
-@jit(nopython=True, nogil=True, cache=True)
-def get_total_unmatched(guesses, answers, answers_char_counts):
-    total_unmatched = np.zeros(guesses.shape[0], dtype=np.intc)
-
-    for guess_idx in range(guesses.shape[0]):
-
-        guess_array = guesses[guess_idx, :]
-
-        for answer_idx in range(answers.shape[0]):
-            match_int = get_match_code_int(
-                guess_array,
-                answers[answer_idx, :],
-                answers_char_counts[answer_idx, :],
-            )
-
-            if match_int == 0:
-                total_unmatched[guess_idx] += 1
-
-    return total_unmatched
-
-
 class MaxPruneAgent(NumbaAgent):
-    def __init__(self, answers, guesses, mode="standard", first_guess="soare", guess_data=None, answer_data=None):
-        super().__init__(answers, guesses, mode, first_guess, guess_data, answer_data)
+    def __init__(
+        self,
+        answers,
+        guesses,
+        mode="standard",
+        first_guess={"standard": "laten", "hard": "leant"},
+        guess_data=None,
+        answer_data=None,
+        bin_table=None,
+    ):
+        super().__init__(
+            answers, guesses, mode, first_guess, guess_data, answer_data, bin_table
+        )
 
     @staticmethod
-    def order_guesses(guesses_numba, answers_numba, answers_char_counts):
-
-        total_unmatched = get_total_unmatched(
-            guesses_numba,
-            answers_numba,
-            answers_char_counts,
-        )
+    def order_guesses(bin_counts):
+        total_unmatched = bin_counts[0, :]
 
         sort_idx = np.argsort(total_unmatched)
 
