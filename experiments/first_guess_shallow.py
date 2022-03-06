@@ -38,7 +38,9 @@ if __name__ == "__main__":
     pool = Pool(cpu_count())
 
     results = pool.starmap(
-        job, (({"agent": agent}, answers, guesses) for agent in agent_list)
+        job, [({"agent": agent}, answers, guesses) for agent in agent_list]
     )
+
+    # results = [job({"agent": agent}, answers, guesses) for agent in agent_list]
 
     pd.DataFrame(results).to_csv("first_guess_shallow.csv", index=False)

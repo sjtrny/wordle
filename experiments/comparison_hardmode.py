@@ -1,5 +1,5 @@
 from wordle import Game, MaxInfoAgent, MaxSplitsAgent, MaxPruneAgent
-from wordle import get_numeric_representations
+from wordle import get_numeric_representations, get_bin_table
 import numpy as np
 from multiprocessing import Pool, cpu_count
 import time
@@ -11,6 +11,8 @@ def sub_job(agent_cls, sub_answers, answers, guesses):
 
     guesses_numba, guesses_char_counts = get_numeric_representations(guesses)
     answers_numba, answers_char_counts = get_numeric_representations(answers)
+
+    bin_table = get_bin_table(guesses_numba, answers_numba, answers_char_counts)
 
     results = []
 
@@ -25,11 +27,11 @@ def sub_job(agent_cls, sub_answers, answers, guesses):
             mode="hard",
             guess_data=(guesses_numba, guesses_char_counts),
             answer_data=(answers_numba, answers_char_counts),
+            bin_table=bin_table
         )
         final_guess, n_guesses = agent.play(g)
 
         end_time = time.time()
-        print(answer_idx, answer, end_time - start_time)
 
         results.append((answer, final_guess, n_guesses, end_time - start_time))
 

@@ -1,6 +1,7 @@
 agent,agent_name,mean_n_plays,failed_words,mean_play_time
-<class 'wordle.MaxInfoAgent'>,MaxInfoAgent,3.639635732870772,['goner' 'hatch' 'jaunt' 'found' 'waste' 'taunt' 'catch' 'dilly' 'boxer'],0.01606575665221665
-<class 'wordle.MaxSplitsAgent'>,MaxSplitsAgent,3.6259211096662334,['pound' 'hatch' 'watch' 'found' 'cover' 'blank' 'boxer' 'wight'],0.012398678656000568
-<class 'wordle.MaxPruneAgent'>,MaxPruneAgent,3.8034934497816595,"['dolly' 'mover' 'piper' 'water' 'foist' 'bound' 'sense' 'viper' 'rarer'
- 'waver' 'wreak' 'flake' 'wound' 'baste' 'tight' 'biddy' 'happy' 'fleck'
- 'mossy' 'hound' 'blame' 'vaunt' 'match' 'catty' 'rower']",0.015881031361209254
+<class 'wordle.MaxInfoAgent'>,MaxInfoAgent,3.6415584415584417,['pound' 'hatch' 'found' 'poker' 'wight'],0.010421496758729349
+<class 'wordle.MaxSplitsAgent'>,MaxSplitsAgent,3.6259211096662334,['pound' 'hatch' 'watch' 'found' 'cover' 'blank' 'boxer' 'wight'],0.007437066283637329
+<class 'wordle.MaxPruneAgent'>,MaxPruneAgent,3.8301969365426696,"['cover' 'finch' 'boxer' 'jewel' 'foist' 'hilly' 'viper' 'expel' 'wafer'
+ 'flake' 'wound' 'right' 'corer' 'kinky' 'state' 'baste' 'tight' 'dully'
+ 'golly' 'stash' 'snore' 'hound' 'blame' 'vaunt' 'willy' 'match' 'catty'
+ 'roger' 'rower' 'shave']",0.007158837015832279

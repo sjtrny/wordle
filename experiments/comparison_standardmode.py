@@ -29,7 +29,7 @@ def sub_job(agent_cls, sub_answers, answers, guesses):
         final_guess, n_guesses = agent.play(g)
 
         end_time = time.time()
-        print(answer_idx, answer, end_time - start_time)
+        # print(answer_idx, answer, end_time - start_time)
 
         results.append((answer, final_guess, n_guesses, end_time - start_time))
 

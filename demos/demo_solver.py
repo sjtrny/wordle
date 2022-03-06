@@ -40,7 +40,7 @@ while True:
     suggested_guess, remaining_answers = solver.step(code, guess)
     if (len(remaining_answers)) > 1:
         print(
-            f"Next guess: {suggested_guess}, {len(remaining_answers)} answers remaining",
+            f"Next guess: {suggested_guess}, {len(remaining_answers)} answers remaining: {remaining_answers}",
         )
     else:
         print(f"Answer is {suggested_guess}")

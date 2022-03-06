@@ -3,10 +3,9 @@ import string
 from numba import jit
 from abc import ABC, abstractmethod
 import array
-from scipy.stats import entropy
+import time
 
 alphabet = string.ascii_lowercase
-
 
 def get_match_code_game(guess, answer):
     result = array.array("u", ["0", "0", "0", "0", "0"])
@@ -81,6 +80,60 @@ def get_bin_counts(guesses, answers, answers_char_counts):
 
     return counts
 
+@jit(nopython=True, nogil=True, cache=True)
+def get_bin_counts_inline(guesses, answers, answers_char_counts):
+    n_codes = 1024  # 2 bits for 5 characters gives max 1024
+
+    counts = np.zeros((n_codes, guesses.shape[0]), dtype=np.intc)
+
+    for guess_idx in range(guesses.shape[0]):
+
+        guess_numba = guesses[guess_idx, :]
+        answer_char_counts_g = answers_char_counts.copy()
+
+        for answer_idx in range(answers.shape[0]):
+
+            result = 0
+
+            answer_numba = answers[answer_idx, :]
+            answer_char_counts = answer_char_counts_g[answer_idx, :]
+
+            # Find exact matches
+            for letter_idx in range(5):
+                alphabet_idx = guess_numba[letter_idx]
+
+                if guess_numba[letter_idx] == answer_numba[letter_idx]:
+                    result += 2 << letter_idx * 2
+                    answer_char_counts[alphabet_idx] -= 1
+
+            # Find inexact matches
+            for letter_idx in range(5):
+                alphabet_idx = guess_numba[letter_idx]
+
+                # If letter in answer
+                if (
+                        answer_char_counts[alphabet_idx] > 0
+                        and guess_numba[letter_idx] != answer_numba[letter_idx]
+                ):
+                    result += 1 << letter_idx * 2
+                    answer_char_counts[alphabet_idx] -= 1
+
+            counts[result, guess_idx] += 1
+
+    return counts
+
+# Faster than scipy implementation
+def entropy(counts):
+
+    probabilities = counts / np.sum(counts, axis=0)
+
+    return -np.sum(
+        probabilities
+        * np.log10(
+            probabilities, out=np.zeros_like(probabilities), where=probabilities != 0
+        ),
+        axis=0,
+    )
 
 def information_gain(bin_counts):
     full_entropy = -np.log(1 / bin_counts.shape[1])
@@ -116,6 +169,7 @@ def get_bin_counts_approximate(guesses, answers, answers_char_counts, sample_siz
     for guess_idx in range(guesses.shape[0]):
         guess_array = guesses[guess_idx, :]
 
+        # This could be moved out of the loop by adding another dimension
         sub_answer_idxs = np.random.choice(len(answers), size=sample_size, replace=True)
 
         for sub_answer_idx in range(sub_answer_idxs.shape[0]):
@@ -147,6 +201,45 @@ def get_bin_table(guesses, answers, answers_char_counts):
 
     return bin_table.T
 
+@jit(nopython=True, nogil=True, cache=True)
+def get_bin_table_inline(guesses, answers, answers_char_counts):
+
+    bin_table = np.zeros((guesses.shape[0], answers.shape[0]), dtype=np.uint)
+
+    for guess_idx in range(guesses.shape[0]):
+        guess_numba = guesses[guess_idx, :]
+        answer_char_counts_g = answers_char_counts.copy()
+
+        for answer_idx in range(answers.shape[0]):
+
+            result = 0
+
+            answer_numba = answers[answer_idx, :]
+            answer_char_counts = answer_char_counts_g[answer_idx, :]
+
+            # Find exact matches
+            for letter_idx in range(5):
+                alphabet_idx = guess_numba[letter_idx]
+
+                if guess_numba[letter_idx] == answer_numba[letter_idx]:
+                    result += 2 << letter_idx * 2
+                    answer_char_counts[alphabet_idx] -= 1
+
+            # Find inexact matches
+            for letter_idx in range(5):
+                alphabet_idx = guess_numba[letter_idx]
+
+                # If letter in answer
+                if (
+                        answer_char_counts[alphabet_idx] > 0
+                        and guess_numba[letter_idx] != answer_numba[letter_idx]
+                ):
+                    result += 1 << letter_idx * 2
+                    answer_char_counts[alphabet_idx] -= 1
+
+            bin_table[guess_idx, answer_idx] = result
+
+    return bin_table.T
 
 @jit(nopython=True, nogil=True, cache=True)
 def bin_table_to_counts(bin_table, guess_mask, answer_mask):
@@ -316,12 +409,12 @@ class NumbaAgent(Agent):
             # Determine best guess
             if np.sum(answer_total_mask) > 1:
 
-                if not isinstance(self.bin_table, None):
+                if type(self.bin_table) != type(None):
                     bin_counts = bin_table_to_counts(
                         self.bin_table, guess_total_mask, answer_total_mask
                     )
                 else:
-                    bin_counts = get_bin_counts(
+                    bin_counts = get_bin_counts_inline(
                         self.guesses_numba[guess_total_mask, :].squeeze(),
                         self.answers_numba[answer_total_mask, :].squeeze(),
                         self.answers_char_counts[answer_total_mask, :].squeeze(),
@@ -496,7 +589,7 @@ class MaxInfoSolver(NumbaSolver):
         if np.sum(self.answer_total_mask) > 1:
             # For whatever reason, indexing like this adds a dimension so we
             # squeeze the dimensions
-            bin_counts = get_bin_counts(
+            bin_counts = get_bin_counts_inline(
                 self.guesses_numba[self.guess_total_mask, :].squeeze(),
                 self.answers_numba[self.answer_total_mask, :].squeeze(),
                 self.answers_char_counts[self.answer_total_mask, :].squeeze(),

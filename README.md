@@ -3,8 +3,8 @@
 A fast solver for wordle written in Python using numba.
 
 For the maximum information policy it takes:
-- 3 seconds to compute the optimal starting word for first play
-- 30 minutes to compute the optimal starting word considering all future plays
+- less than 3 seconds to compute the optimal next word
+- 30 minutes to compute the optimal starting word considering all solutions
 
 Test conducted on MacBook Pro (13-inch, M1, 2020)
 
@@ -34,53 +34,131 @@ Run `demos/demo_game.py`
 
 ## Game Modes
 
-Wordle can be played in standard or hard mode. In hard mode, any revealed hints must be used in subsequent guesses.
+This package supports both standard and hard mode.
+In hard mode, any revealed hints must be used in subsequent guesses.
 
-This package supports both standard and hard mode. For simulations you can choose between StandardAgent or HardAgent, while
-for interactive solving you can choose between StandardSolver and HardSolver.
+Use the `mode` parameter of the various Agent and Solver classes to change modes e.g.
 
-## Optimal First Word
+    agent = MaxInfoAgent(answers, guesses, mode="standard")
 
-In terms of fewest average plays the optimal first word is `reast` when
-considering all possible outcomes.
+## Performance and Optimal Starting Word
 
-When considering only the first play the optimal first word is `soare`.
+I consider an optimal start word to be the one that solves the most answers and takes the fewest plays on average.
 
-Run either `first_guess_{deep,shallow}_{standard,hard}.py` to replicate results.
+The optimal starting word depends on the policy used and the game mode. The table below outlines the optimal starting word and performance
+characteristics of each policy on the original wordle answer/guess list.
 
-## Performance
-
-### Standard Mode
-
-- Average number of plays to solve: 3.6004
-- Failed words: None
-
-### Hard Mode
-
-- Average number of plays to solve: 3.6396
-- Failed words: 9 total - `goner, hatch, jaunt, found, waste, taunt, catch, dilly, boxer`
+| Policy    | Mode     | Optimal Starting Word | Mean Guesses       | Failed Words                                                                                                                                                                                            |
+|-----------|----------|-----------------------|--------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| MaxInfo   | Standard | 'reast'               | 3.600431965442765  | 'goner' 'hatch' 'jaunt' 'found' 'waste' 'taunt' 'catch' 'dilly' 'boxer'                                                                                                                                 |
+|           | Hard     | 'reast'               | 3.639635732870772  |                                                                                                                                                                                                         |
+| MaxSplits | Standard | 'trace'               | 3.6207343412527    |                                                                                                                                                                                                         |
+|           | Hard     | 'salet'               | 3.6259211096662334 | 'pound' 'hatch' 'watch' 'found' 'cover' 'blank' 'boxer' 'wight'                                                                                                                                         |
+| MaxPrune  | Standard | 'laten'               | 4.439469320066335  | 'sissy' 'awake' 'blush' ... 'judge' 'rower' 'shave'                                                                                                                                                     |
+|           | Hard     | 'leant'               | 3.8034934497816595 | 'dolly' 'mover' 'piper' 'water' 'foist' 'bound' 'sense' 'viper' 'rarer' 'waver' 'wreak' 'flake' 'wound' 'baste' 'tight' 'biddy' 'happy' 'fleck' 'mossy' 'hound' 'blame' 'vaunt' 'match' 'catty' 'rower' |
 
 ### Notes
 
 Failed words are often due to "lookalikes". For example with the word `hatch` the solver will check `match`, `batch`, `patch` and `latch` first and ultimately fail.
 
-## Methodology
+## Policies
 
-The solver attempts to play words that maximise the amount of information about the solution that is received after playing.
-In statistical terms this means playing the word that has the highest entropy for the outcome.
+### Maximum Information
 
-A guess results in 243 possible outcomes (5 letters with 3 states i.e. 3^5). For example all 5 grey letters is one outcome, a green followed by four grey letters is another.
+The policy plays the word from the guess list that maximises the expected information content revealed about the solution, until there
+is one solution remaining. Played words are not repeated as they would not reveal new information.
 
-The entropy for a guess is given by 
+Let the outcome from making a guess, i.e. the code received, be a discrete random variable X. This random variable has 
+243 possible values (5 letters with 3 states i.e. 3^5). For example all 5 grey letters is one outcome,
+a green followed by four grey letters is another.
 
-![equation](http://www.sciweavers.org/tex2img.php?eq=-%20%5Csum_%7Bi%3D1%7D%5E%7B243%7D%20P%28o_i%29%20%5Clog%7BP%28o_i%29%7D&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0)
+For a guess G the probability of an outcome is given by a Categorical distribution i.e.
 
-where P(o_i) is the probability of outcome i. The value of P(o_i) is just the proportion
+$P(X | G) \sim Cat(k, p)$
+
+The expected information content in the outcomes of P(X | G) is given by entropy, which is
+defined as
+
+$H(X|G) = -\sum_{i=1}^{243} P(X=x_i | G) \log(P(X=x_i | G))$
+
+where $P(X=x_i | G)$ is the probability of outcome $i$. The value of $P(X=x_i | G)$ is just the proportion
 of answers that fall in outcome i when playing the guess word.
 
-The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins. Once the outcome is observed we are left to choose amongst the relatively few remaining answers associated with the bin.
+The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins.
 
-## Installing numba on Apple M1
+#### Information Gain Equivalance
+
+The Maximum Information policy is equivalent to the Information Gain policy in decision trees.
+
+A decision node consists of a guess word and the leaf nodes correspond to 
+each of the 243 possible outcomes that the answers can be placed into.
+
+Under the information gain policy one must select the word which results in the greatest
+information gain, which is defined as:
+
+$IG = H(S) - H(S|G)$
+
+where H(S) is the entropy of set S, which is the set of all remaining answers and
+
+$H(S | G)  = \sum_{i=1}^{243} \frac{|S_i|}{|S|} * H( S_i )$
+
+is the conditional entropy due to the creation 243 splits, by using playing G, with each split  containing a set of
+answers called S_i.
+
+We can then calculate $H( S_i )$ as
+
+$H( S_i ) = - \sum_{j=1}^{|S_i|} P(j) \log(P(j))$
+
+where P(j) is the probability of answer j in S_i and is equal to 1/|S_i| since we treat
+answers as categories and the answers are unique.
+
+We can simplify as follows:
+
+$H( S_i ) = - \sum_{j=1}^{|S_i|} \frac{1}{|S_i|} \log(\frac{1}{|S_i|})$
+
+$H( S_i ) = - \frac{1}{|S_i|} \sum_{j=1}^{|S_i|} \log(\frac{1}{|S_i|})$
+
+$H( S_i ) = - \frac{1}{|S_i|} * |S_i| * \log(\frac{1}{|S_i|})$
+
+$H( S_i ) = - \log(\frac{1}{|S_i|})$
+
+Thus
+
+$H(S | G)  = \sum_{i=1}^{243} \frac{|S_i|}{|S|} * - \log(\frac{1}{|S_i|})$
+
+and 
+
+$H(S) = -\log(\frac{1}{|S|})$
+
+The equivalence can be seen that
+
+$P(X=x_i | G) = \frac{|S_i|}{|S|}$
+
+and
+
+$log(P(X=x_i | G)) \propto log(\frac{1}{|S_i|}) $
+
+$\frac{|S_i|}{|S|} \propto log(\frac{1}{|S_i|})$
+
+$log(|S_i|) - log(|S|) = log(1) - log(|S_i|)$
+
+*Need to expand the sum of each element and include the H(S) term*
+
+[//]: # (Thus lowest set entropy implies that we must have a large number of small bins)
+
+
+### Maximum Splits
+
+This policy plays the word from the guess list that results in the largest number of outcomes.
+
+### Maximum Prune
+
+This policy plays the word that reduces the remaining answers as much as possible.
+
+
+## Appendix - Installation Notes
+
+### numba on Apple M1
 
 numba requires llvmlite, which in turn requires llvm version 11. The default installed version of llvm is likely more recent than version 11.
 
@@ -94,7 +172,7 @@ numba requires llvmlite, which in turn requires llvm version 11. The default ins
 
 `pip install numba`
 
-## Installing scipy on Apple M1
+### scipy on Apple M1
 
     brew install openblas
     pip install --no-cache --no-use-pep517 pythran cython pybind11 gast

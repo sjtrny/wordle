@@ -1,4 +1,4 @@
 agent,agent_name,first_word,time_taken
-<class 'wordle.MaxInfoAgent'>,MaxInfoAgent,soare,2.823559284210205
-<class 'wordle.MaxSplitsAgent'>,MaxSplitsAgent,trace,2.472710132598877
-<class 'wordle.MaxPruneAgent'>,MaxPruneAgent,aurei,2.434314012527466
+<class 'wordle.MaxInfoAgent'>,MaxInfoAgent,soare,0.9274089336395264
+<class 'wordle.MaxSplitsAgent'>,MaxSplitsAgent,trace,0.8421609401702881
+<class 'wordle.MaxPruneAgent'>,MaxPruneAgent,aurei,0.7927191257476807
