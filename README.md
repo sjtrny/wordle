@@ -41,6 +41,15 @@ Use the `mode` parameter of the various Agent and Solver classes to change modes
 
     agent = MaxInfoAgent(answers, guesses, mode="standard")
 
+## Bullshit Detector
+
+Don't trust how fast someone solved wordle? Check their results by seeing all remaining words, ranked by common usage.
+
+Run either of:
+
+- `demos/bs_plays.py`
+- `demos/bs_tiles.py`
+
 ## Performance and Optimal Starting Word
 
 I consider an optimal start word to be the one that solves the most answers and takes the fewest plays on average.
@@ -86,7 +95,39 @@ of answers that fall in outcome i when playing the guess word.
 
 The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins.
 
-#### Information Gain Equivalance
+
+### Maximum Splits
+
+This policy plays the word from the guess list that results in the largest number of outcomes.
+
+### Maximum Prune
+
+This policy plays the word that reduces the remaining answers as much as possible.
+
+
+## Appendix - Installation Notes
+
+### numba on Apple M1
+
+numba requires llvmlite, which in turn requires llvm version 11. The default installed version of llvm is likely more recent than version 11.
+
+1. Install llvm version 11
+
+`arch -arm64 brew install llvm@11`
+
+2. Install llvmlite by pointing to old llvm version
+
+`LLVM_CONFIG="/opt/homebrew/Cellar/llvm@11/11.1.0_3/bin/llvm-config" arch -arm64 pip install llvmlite`
+
+`pip install numba`
+
+### scipy on Apple M1
+
+    brew install openblas
+    pip install --no-cache --no-use-pep517 pythran cython pybind11 gast
+    OPENBLAS="$(brew --prefix openblas)" pip install --no-cache --no-binary :all: --no-use-pep517 scipy
+
+## Appendix - Information Gain Equivalance
 
 The Maximum Information policy is equivalent to the Information Gain policy in decision trees.
 
@@ -143,40 +184,5 @@ $\frac{|S_i|}{|S|} \propto log(\frac{1}{|S_i|})$
 $log(|S_i|) - log(|S|) = log(1) - log(|S_i|)$
 
 *Need to expand the sum of each element and include the H(S) term*
-
-[//]: # (Thus lowest set entropy implies that we must have a large number of small bins)
-
-
-### Maximum Splits
-
-This policy plays the word from the guess list that results in the largest number of outcomes.
-
-### Maximum Prune
-
-This policy plays the word that reduces the remaining answers as much as possible.
-
-
-## Appendix - Installation Notes
-
-### numba on Apple M1
-
-numba requires llvmlite, which in turn requires llvm version 11. The default installed version of llvm is likely more recent than version 11.
-
-1. Install llvm version 11
-
-`arch -arm64 brew install llvm@11`
-
-2. Install llvmlite by pointing to old llvm version
-
-`LLVM_CONFIG="/opt/homebrew/Cellar/llvm@11/11.1.0_3/bin/llvm-config" arch -arm64 pip install llvmlite`
-
-`pip install numba`
-
-### scipy on Apple M1
-
-    brew install openblas
-    pip install --no-cache --no-use-pep517 pythran cython pybind11 gast
-    OPENBLAS="$(brew --prefix openblas)" pip install --no-cache --no-binary :all: --no-use-pep517 scipy
-
 
 
