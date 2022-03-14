@@ -97,6 +97,7 @@ These extensions introduce new optimality criteria, which must be satisfied alon
 ### Games Inspired by Wordle
 
 - [Quordle](https://www.quordle.com/)
+- [Heardle](https://www.heardle.app/)
 - [Worldle](https://worldle.teuteuf.fr)
 - [Nerdle](https://nerdlegame.com)
 - [Mathle](https://mathlegame.com)
