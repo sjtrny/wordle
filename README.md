@@ -1,3 +1,4 @@
+
 # wordle
 
 A fast solver for wordle written in Python using numba.
@@ -77,24 +78,25 @@ Failed words are often due to "lookalikes". For example with the word `hatch` th
 The policy plays the word from the guess list that maximises the expected information content revealed about the solution, until there
 is one solution remaining. Played words are not repeated as they would not reveal new information.
 
-Let the outcome from making a guess, i.e. the code received, be a discrete random variable X. This random variable has 
-243 possible values (5 letters with 3 states i.e. 3^5). For example all 5 grey letters is one outcome,
-a green followed by four grey letters is another.
+Let the outcome from making a guess, i.e. the code received, be a discrete random variable $X$. This random variable has 243 possible outcomes (5 letters each with 3 feedback states i.e. $3^5$). The following are examples of outcomes:
+- ⬜️⬜️⬜️⬜️⬜️ - no matches,
+- 🟩⬜️⬜️⬜️⬜️ - only first letter matched,
+- 🟩⬜️⬜️🟨⬜️ - exact match and a partial match.
 
-For a guess G the probability of an outcome is given by a Categorical distribution i.e.
+For a guessed word, $G$, the probability of an outcome is given by a Categorical distribution i.e.
 
-$P(X | G) \sim Cat(k, p)$
+$$P(X | G) \sim Cat(k, p)$$
 
-The expected information content in the outcomes of P(X | G) is given by entropy, which is
-defined as
+The expected information content in the outcomes of $P(X | G)$ is given by entropy, which is defined as
 
-$H(X|G) = -\sum_{i=1}^{243} P(X=x_i | G) \log(P(X=x_i | G))$
+$$H(X|G) = -\sum_{i=1}^{243} P(X=x_i | G) \log(P(X=x_i | G))$$
 
-where $P(X=x_i | G)$ is the probability of outcome $i$. The value of $P(X=x_i | G)$ is just the proportion
-of answers that fall in outcome i when playing the guess word.
+where $P(X=x_i | G)$ is the probability of outcome $i$. The value of $P(X=x_i | G)$ is  the proportion of answers that fall in outcome $i$ when playing the guess word. Therefore 
+$$H(X|G) = -\sum_{i=1}^{243} P(X=x_i | G) \log(P(X=x_i | G))$$
 
-The word that most evenly divides the answer pool into the 243 bins (i.e. highest entropy) will neccesarily result in a large number of small bins.
+$$H(X | G)  = - \sum_{i=1}^{243} \frac{|S_i|}{|S|} \log \left (\frac{|S_i|}{|S|} \right )$$
 
+The word that most evenly divides the answer pool into the 243 bins necessitates the greatest number of bins and thus has highest entropy.
 
 ### Maximum Splits
 
@@ -129,60 +131,59 @@ numba requires llvmlite, which in turn requires llvm version 11. The default ins
 
 ## Appendix - Information Gain Equivalance
 
-The Maximum Information policy is equivalent to the Information Gain policy in decision trees.
+The Maximum Information policy is equivalent to the Information Gain decision policy used by tree learning algorithms such as ID3, C4.5 and CART.
 
 A decision node consists of a guess word and the leaf nodes correspond to 
 each of the 243 possible outcomes that the answers can be placed into.
 
-Under the information gain policy one must select the word which results in the greatest
-information gain, which is defined as:
+Under the information gain policy one must select the word which results in the greatest information gain, which is defined as:
 
-$IG = H(S) - H(S|G)$
+$$IG(S,G) = H(S) - H(S|G)$$
 
-where H(S) is the entropy of set S, which is the set of all remaining answers and
+where $H(S)$ is the entropy of set $S$, which is the set of all remaining answers and
 
-$H(S | G)  = \sum_{i=1}^{243} \frac{|S_i|}{|S|} * H( S_i )$
+$$H(S | G)  = \sum_{i=1}^{243} \frac{|S_i|}{|S|} * H( S_i )$$
 
-is the conditional entropy due to the creation 243 splits, by using playing G, with each split  containing a set of
-answers called S_i.
+is the conditional entropy due to the creation 243 splits, by playing word $G$, with each split containing a set of answers called $S_i$.
 
-We can then calculate $H( S_i )$ as
+Expanding
 
-$H( S_i ) = - \sum_{j=1}^{|S_i|} P(j) \log(P(j))$
+$$H( S_i ) = - \sum_{j=1}^{|S_i|} P(j) \log(P(j))$$
 
-where P(j) is the probability of answer j in S_i and is equal to 1/|S_i| since we treat
-answers as categories and the answers are unique.
+where $P(j)$ is the probability of answer $j$ in $S_i$ and is equal to $\frac{1}{|S_i|}$ since we treat answers as categories and the answers are unique.
 
 We can simplify as follows:
 
-$H( S_i ) = - \sum_{j=1}^{|S_i|} \frac{1}{|S_i|} \log(\frac{1}{|S_i|})$
+$$H( S_i ) = - \sum_{j=1}^{|S_i|} \frac{1}{|S_i|} \log(\frac{1}{|S_i|})$$
 
-$H( S_i ) = - \frac{1}{|S_i|} \sum_{j=1}^{|S_i|} \log(\frac{1}{|S_i|})$
+$$H( S_i ) = - \frac{1}{|S_i|} \sum_{j=1}^{|S_i|} \log(\frac{1}{|S_i|})$$
 
-$H( S_i ) = - \frac{1}{|S_i|} * |S_i| * \log(\frac{1}{|S_i|})$
+$$H( S_i ) = - \frac{1}{|S_i|} * |S_i| * \log(\frac{1}{|S_i|})$$
 
-$H( S_i ) = - \log(\frac{1}{|S_i|})$
+$$H( S_i ) = - \log(\frac{1}{|S_i|})$$
 
-Thus
 
-$H(S | G)  = \sum_{i=1}^{243} \frac{|S_i|}{|S|} * - \log(\frac{1}{|S_i|})$
+Therefore
+$$H(S | G)  = - \sum_{i=1}^{243} \frac{|S_i|}{|S|} - \log(\frac{1}{|S_i|})$$
 
-and 
+The equivalence can be seen through expanding the logs of both approaches and dropping constant terms. First the criteria from the wordle policy .
 
-$H(S) = -\log(\frac{1}{|S|})$
+$$H(X|G) = -\sum_{i=1}^{243} P(X=x_i | G) \log(P(X=x_i | G))$$
 
-The equivalence can be seen that
+$$H(X|G) = -\sum_{i=1}^{243}  \frac{|S_i|}{|S|} \log(\frac{|S_i|}{|S|})$$
 
-$P(X=x_i | G) = \frac{|S_i|}{|S|}$
+$$H(X|G) = -\sum_{i=1}^{243}  \frac{|S_i|}{|S|} \left(\log(|S_i|) - \log(|S|) \right)$$
 
-and
+$$H(X|G) = -\sum_{i=1}^{243}  \frac{|S_i|}{|S|} \log(|S_i|)$$
 
-$log(P(X=x_i | G)) \propto log(\frac{1}{|S_i|}) $
 
-$\frac{|S_i|}{|S|} \propto log(\frac{1}{|S_i|})$
+then the decision tree case
 
-$log(|S_i|) - log(|S|) = log(1) - log(|S_i|)$
+$$H(S | G)  = - \sum_{i=1}^{243} \frac{|S_i|}{|S|} - \log(\frac{1}{|S_i|})$$
 
-*Need to expand the sum of each element and include the H(S) term*
+$$H(S | G)  = - \sum_{i=1}^{243} \frac{|S_i|}{|S|} - \left(\log(1) - \log(|S_i|) \right)$$
+
+$$H(S | G)  = - \sum_{i=1}^{243} \frac{|S_i|}{|S|} \log(|S_i|)$$
+
 
 
